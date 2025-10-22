@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=390, initial-scale=1.0" />
+  <title>Crypto Price Betting</title>
+
+  <!-- Farcaster Mini App Metadata -->
+  <meta name="fc:miniapp" content='{
+    "version":"1",
+    "imageUrl":"https://your-app.vercel.app/image.png",
+    "button":{
+      "title":"Crypto Betting",
+      "action":{
+        "type":"launch_frame",
+        "name":"Crypto Price Betting",
+        "url":"https://your-app.vercel.app",
+        "splashImageUrl":"https://your-app.vercel.app/splash.png",
+        "splashBackgroundColor":"#111111"
+      }
+    }
+  }' />
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      margin: 0;
+      background: #0a0a0a;
+      color: #fff;
+      font-family: Inter, system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      max-width: 390px;
+      margin-inline: auto;
+      padding-bottom: 20px;
+    }
+
+    .header {
+      width: 100%;
+      padding: 16px;
+      background: #111;
+      border-bottom: 1px solid #222;
+    }
+
+    .wallet-info {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .wallet-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .address {
+      color: #ffd166;
+      font-weight: 600;
+    }
+
+    .balance {
+      color: #aaa;
+    }
+
+    .tabbar {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      padding: 12px;
+    }
+
+    .tabbar button {
+      flex: 1;
+      padding: 10px;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      color: #aaa;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .tabbar button.active {
+      background: #ffd166;
+      color: #000;
+      border-color: #ffd166;
+    }
+
+    .hidden { display: none; }
+
+    .section {
+      width: 100%;
+      padding: 0 12px;
+    }
+
+    .wallet-actions {
+      display: flex;
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    .btn {
+      padding: 12px;
+      background: #ffd166;
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      font-weight: 800;
+      cursor: pointer;
+      font-size: 14px;
+      flex: 1;
+    }
+
+    .btn:disabled {
+      background: #444;
+      color: #888;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: #2a2a2a;
+      color: #fff;
+      border: 1px solid #444;
+    }
+
+    .input-group {
+      margin: 12px 0;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      color: #aaa;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 10px;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 14px;
+    }
+
+    .slots-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .slot-card {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 14px;
+    }
+
+    .slot-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .token-name {
+      font-size: 18px;
+      font-weight: 800;
+      color: #ffd166;
+    }
+
+    .status-badge {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .status-open {
+      background: #2d5016;
+      color: #7ee027;
+    }
+
+    .status-closed {
+      background: #4a1e1e;
+      color: #ff6b6b;
+    }
+
+    .status-settled {
+      background: #2a3a4a;
+      color: #64b5f6;
+    }
+
+    .slot-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 12px 0;
+      font-size: 13px;
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .info-label {
+      color: #888;
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+
+    .info-value {
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .pools {
+      display: flex;
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    .pool {
+      flex: 1;
+      padding: 10px;
+      background: #0f0f0f;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .pool-label {
+      font-size: 11px;
+      color: #888;
+      margin-bottom: 4px;
+    }
+
+    .pool-value {
+      font-size: 16px;
+      font-weight: 700;
+      color: #ffd166;
+    }
+
+    .bet-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .bet-buttons {
+      display: flex;
+      gap: 8px;
+    }
+
+    .timer {
+      text-align: center;
+      padding: 8px;
+      background: #0f0f0f;
+      border-radius: 8px;
+      margin: 8px 0;
+      font-size: 13px;
+      color: #ffd166;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 14px;
+      padding: 10px 14px;
+      font-weight: 600;
+      max-width: 360px;
+      width: calc(100% - 24px);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+      display: none;
+      z-index: 9999;
+    }
+
+    .toast a {
+      color: #ffd166;
+      text-decoration: underline;
+    }
+
+    .toast.show {
+      display: block;
+      animation: fadeIn 0.25s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translate(-50%, 10px);
+      }
+      to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-content {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 16px;
+      padding: 20px;
+      width: 90%;
+      max-width: 350px;
+    }
+
+    .modal-header {
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 16px;
+      color: #ffd166;
+    }
+
+    .bet-option {
+      display: flex;
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    .bet-option button {
+      flex: 1;
+      padding: 12px;
+      background: #2a2a2a;
+      border: 2px solid #444;
+      color: #fff;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .bet-option button.selected {
+      background: #ffd166;
+      color: #000;
+      border-color: #ffd166;
+    }
+
+    .user-bet-info {
+      text-align: center;
+      font-size: 12px;
+      color: #ffd166;
+      margin: 8px 0;
+      padding: 8px;
+      background: #0f0f0f;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header with Wallet Info -->
+  <div class="header">
+    <div class="wallet-info">
+      <div class="wallet-row">
+        <span>Address:</span>
+        <span class="address" id="walletAddress">Connecting...</span>
+      </div>
+      <div class="wallet-row">
+        <span>Wallet Balance:</span>
+        <span class="balance" id="walletBalance">-- ETH</span>
+      </div>
+      <div class="wallet-row">
+        <span>Contract Balance:</span>
+        <span class="balance" id="contractBalance">-- ETH</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Bar -->
+  <div class="tabbar">
+    <button id="tabWalletBtn" class="active">Wallet</button>
+    <button id="tabBetBtn">Bet</button>
+  </div>
+
+  <!-- Wallet Tab -->
+  <section id="walletTab" class="section">
+    <div class="wallet-actions">
+      <button id="depositBtn" class="btn">Deposit</button>
+      <button id="withdrawBtn" class="btn btn-secondary">Withdraw</button>
+    </div>
+
+    <div class="input-group hidden" id="depositInput">
+      <label>Deposit Amount (min 0.0005 ETH)</label>
+      <input type="number" id="depositAmount" placeholder="0.001" step="0.0001" min="0.0005" />
+      <button id="confirmDepositBtn" class="btn" style="margin-top: 8px;">Confirm Deposit</button>
+    </div>
+
+    <div class="input-group hidden" id="withdrawInput">
+      <label>Withdraw Amount</label>
+      <input type="number" id="withdrawAmount" placeholder="0.001" step="0.0001" min="0" />
+      <button id="confirmWithdrawBtn" class="btn btn-secondary" style="margin-top: 8px;">Confirm Withdraw</button>
+    </div>
+  </section>
+
+  <!-- Betting Tab -->
+  <section id="betTab" class="section hidden">
+    <div id="slotsContainer" class="slots-container">
+      <p style="text-align: center; color: #888;">Loading slots...</p>
+    </div>
+  </section>
+
+  <!-- Bet Modal -->
+  <div id="betModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header" id="modalTitle">Place Bet - BTC</div>
+      
+      <div class="bet-option">
+        <button id="betAboveBtn">📈 Above</button>
+        <button id="betBelowBtn">📉 Below</button>
+      </div>
+
+      <div class="input-group">
+        <label>Bet Amount (ETH)</label>
+        <input type="number" id="betAmount" placeholder="0.001" step="0.0001" min="0.0001" />
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-top: 16px;">
+        <button id="cancelBetBtn" class="btn btn-secondary">Cancel</button>
+        <button id="confirmBetBtn" class="btn">Place Bet</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast"></div>
+
+  <!-- Farcaster + wagmi -->
+  <script type="module">
+    import { sdk } from 'https://esm.sh/@farcaster/miniapp-sdk';
+    import {
+      createConfig, connect, getAccount, getBalance, readContract, writeContract, watchContractEvent, http
+    } from 'https://esm.sh/@wagmi/core';
+    import { arbitrum } from 'https://esm.sh/@wagmi/core/chains';
+    import { farcasterMiniApp } from 'https://esm.sh/@farcaster/miniapp-wagmi-connector';
+
+    // Initialize Farcaster SDK
+    sdk.actions.ready({ disableNativeGestures: true });
+
+    /* ========== CONTRACT CONFIG ========== */
+    const CONTRACT_ADDRESS = '0x472B905CBD0833AEaC058165C46A615082b36d0b';
+    const CONTRACT_ABI = [{"inputs":[{"internalType":"address","name":"_btcFeed","type":"address"},{"internalType":"address","name":"_ethFeed","type":"address"},{"internalType":"address","name":"_solFeed","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"day","type":"uint256"},{"indexed":false,"internalType":"string","name":"symbol","type":"string"},{"indexed":false,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"bool","name":"above","type":"bool"}],"name":"BetPlaced","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"day","type":"uint256"},{"indexed":false,"internalType":"string","name":"symbol","type":"string"},{"indexed":false,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"payout","type":"uint256"}],"name":"Claimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Deposit","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"day","type":"uint256"},{"indexed":false,"internalType":"string","name":"symbol","type":"string"},{"indexed":false,"internalType":"int256","name":"price","type":"int256"}],"name":"SlotCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"day","type":"uint256"},{"indexed":false,"internalType":"string","name":"symbol","type":"string"},{"indexed":false,"internalType":"int256","name":"targetPrice","type":"int256"}],"name":"SlotSettled","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Withdraw","type":"event"},{"inputs":[],"name":"MIN_DEPOSIT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"balances","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"string","name":"","type":"string"},{"internalType":"address","name":"","type":"address"}],"name":"bets","outputs":[{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"bool","name":"betAbove","type":"bool"},{"internalType":"bool","name":"claimed","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"bettingWindow","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"btcFeed","outputs":[{"internalType":"contract IPriceFeed","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes","name":"","type":"bytes"}],"name":"checkUpkeep","outputs":[{"internalType":"bool","name":"upkeepNeeded","type":"bool"},{"internalType":"bytes","name":"","type":"bytes"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"dayTimestamp","type":"uint256"},{"internalType":"string","name":"symbol","type":"string"}],"name":"claim","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"deposit","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"ethFeed","outputs":[{"internalType":"contract IPriceFeed","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"dayTimestamp","type":"uint256"},{"internalType":"string","name":"symbol","type":"string"}],"name":"getSlotPool","outputs":[{"internalType":"uint256","name":"poolAbove","type":"uint256"},{"internalType":"uint256","name":"poolBelow","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"lastSlotTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes","name":"","type":"bytes"}],"name":"performUpkeep","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"dayTimestamp","type":"uint256"},{"internalType":"string","name":"symbol","type":"string"},{"internalType":"bool","name":"betAbove","type":"bool"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"placeBet","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"settlementTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"string","name":"","type":"string"}],"name":"slots","outputs":[{"internalType":"uint256","name":"startTime","type":"uint256"},{"internalType":"uint256","name":"endTime","type":"uint256"},{"internalType":"uint256","name":"targetTime","type":"uint256"},{"internalType":"uint256","name":"poolAbove","type":"uint256"},{"internalType":"uint256","name":"poolBelow","type":"uint256"},{"internalType":"int256","name":"startPrice","type":"int256"},{"internalType":"int256","name":"targetPrice","type":"int256"},{"internalType":"bool","name":"settled","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"solFeed","outputs":[{"internalType":"contract IPriceFeed","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"}];
+
+    const TOKENS = ['BTC', 'ETH', 'SOL'];
+
+    /* ========== WAGMI CONFIG ========== */
+    const config = createConfig({
+      chains: [arbitrum],
+      transports: { [arbitrum.id]: http() }
+    });
+
+    await connect(config, { connector: farcasterMiniApp() }).catch(() => {});
+
+    let userAddress = getAccount(config)?.address;
+
+    /* ========== UI REFS ========== */
+    const walletAddressEl = document.getElementById('walletAddress');
+    const walletBalanceEl = document.getElementById('walletBalance');
+    const contractBalanceEl = document.getElementById('contractBalance');
+    const toastEl = document.getElementById('toast');
+    const slotsContainer = document.getElementById('slotsContainer');
+    const betModal = document.getElementById('betModal');
+
+    // Tabs
+    const walletTab = document.getElementById('walletTab');
+    const betTab = document.getElementById('betTab');
+    
+    document.getElementById('tabWalletBtn').onclick = () => switchTab('wallet');
+    document.getElementById('tabBetBtn').onclick = () => switchTab('bet');
+
+    function switchTab(tab) {
+      if (tab === 'wallet') {
+        walletTab.classList.remove('hidden');
+        betTab.classList.add('hidden');
+        document.getElementById('tabWalletBtn').classList.add('active');
+        document.getElementById('tabBetBtn').classList.remove('active');
+      } else {
+        betTab.classList.remove('hidden');
+        walletTab.classList.add('hidden');
+        document.getElementById('tabBetBtn').classList.add('active');
+        document.getElementById('tabWalletBtn').classList.remove('active');
+        loadSlots();
+      }
+    }
+
+    /* ========== TOAST ========== */
+    function showToast(html, ms = 3500) {
+      toastEl.innerHTML = html;
+      toastEl.classList.add('show');
+      setTimeout(() => toastEl.classList.remove('show'), ms);
+    }
+
+    /* ========== WALLET FUNCTIONS ========== */
+    async function updateBalances() {
+      if (!userAddress) return;
+
+      try {
+        const balance = await getBalance(config, { address: userAddress });
+        walletBalanceEl.textContent = `${parseFloat(balance.formatted).toFixed(4)} ETH`;
+
+        const contractBal = await readContract(config, {
+          address: CONTRACT_ADDRESS,
+          abi: CONTRACT_ABI,
+          functionName: 'balances',
+          args: [userAddress]
+        });
+        contractBalanceEl.textContent = `${(Number(contractBal) / 1e18).toFixed(4)} ETH`;
+      } catch (e) {
+        console.error('Balance update error:', e);
+      }
+    }
+
+    if (userAddress) {
+      walletAddressEl.textContent = `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`;
+      updateBalances();
+    }
+
+    // Deposit
+    const depositInput = document.getElementById('depositInput');
+    const depositBtn = document.getElementById('depositBtn');
+    const confirmDepositBtn = document.getElementById('confirmDepositBtn');
+
+    depositBtn.onclick = () => {
+      depositInput.classList.toggle('hidden');
+      document.getElementById('withdrawInput').classList.add('hidden');
+    };
+
+    confirmDepositBtn.onclick = async () => {
+      const amount = document.getElementById('depositAmount').value;
+      if (!amount || parseFloat(amount) < 0.0005) {
+        showToast('❌ Minimum deposit is 0.0005 ETH');
+        return;
+      }
+
+      try {
+        const txHash = await writeContract(config, {
+          address: CONTRACT_ADDRESS,
+          abi: CONTRACT_ABI,
+          functionName: 'deposit',
+          value: BigInt(Math.floor(parseFloat(amount) * 1e18))
+        });
+        showToast(`⏳ Deposit pending... <a target="_blank" href="https://arbiscan.io/tx/${txHash}">view</a>`, 5000);
+        setTimeout(updateBalances, 3000);
+      } catch (e) {
+        showToast('❌ Deposit failed');
+        console.error(e);
+      }
+    };
+
+    // Withdraw
+    const withdrawInput = document.getElementById('withdrawInput');
+    const withdrawBtn = document.getElementById('withdrawBtn');
+    const confirmWithdrawBtn = document.getElementById('confirmWithdrawBtn');
+
+    withdrawBtn.onclick = () => {
+      withdrawInput.classList.toggle('hidden');
+      document.getElementById('depositInput').classList.add('hidden');
+    };
+
+    confirmWithdrawBtn.onclick = async () => {
+      const amount = document.getElementById('withdrawAmount').value;
+      if (!amount || parseFloat(amount) <= 0) {
+        showToast('❌ Enter valid amount');
+        return;
+      }
+
+      try {
+        const txHash = await writeContract(config, {
+          address: CONTRACT_ADDRESS,
+          abi: CONTRACT_ABI,
+          functionName: 'withdraw',
+          args: [BigInt(Math.floor(parseFloat(amount) * 1e18))]
+        });
+        showToast(`⏳ Withdraw pending... <a target="_blank" href="https://arbiscan.io/tx/${txHash}">view</a>`, 5000);
+        setTimeout(updateBalances, 3000);
+      } catch (e) {
+        showToast('❌ Withdraw failed');
+        console.error(e);
+      }
+    };
+
+    /* ========== BETTING FUNCTIONS ========== */
+    let currentSlotData = null;
+    let refreshInterval = null;
+
+    async function loadSlots() {
+      try {
+        const lastSlotTime = await readContract(config, {
+          address: CONTRACT_ADDRESS,
+          abi: CONTRACT_ABI,
+          functionName: 'lastSlotTime'
+        });
+
+        const dayTimestamp = Number(lastSlotTime);
+        
+        const htmlPromises = TOKENS.map(token => renderSlotCard(dayTimestamp, token));
+        const html = await Promise.all(htmlPromises);
+        slotsContainer.innerHTML = html.join('');
+
+        if (refreshInterval) clearInterval(refreshInterval);
+        refreshInterval = setInterval(() => updateTimers(dayTimestamp), 1000);
+      } catch (e) {
+        console.error('Load slots error:', e);
+        slotsContainer.innerHTML = '<p style="text-align: center; color: #f88;">Failed to load slots</p>';
+      }
+    }
+
+    async function renderSlotCard(dayTimestamp, symbol) {
+      try {
+        const slot = await readContract(config, {
+          address: CONTRACT_ADDRESS,
+          abi: CONTRACT_ABI,
+          functionName: 'slots',
+          args: [BigInt(dayTimestamp), symbol]
+        });
+
+        const [startTime, endTime, targetTime, poolAbove, poolBelow, startPrice, targetPrice, settled] = slot;
+        const now = Math.floor(Date.now() / 1000);
+
+        let status = 'settled';
+        let statusClass = 'status-settled';
+        if (!settled) {
+          if (now < Number(endTime)) {
+            status = 'open';
+            statusClass = 'status-open';
+          } else {
+            status = 'closed';
+            statusClass = 'status-closed';
+          }
+        }
+
+        let userBet = null;
+        let canClaim = false;
+        if (userAddress) {
+          try {
+            const bet = await readContract(config, {
+              address: CONTRACT_ADDRESS,
+              abi: CONTRACT_ABI,
+              functionName: 'bets',
+              args: [BigInt(dayTimestamp), symbol, userAddress]
+            });
+            if (Number(bet[0]) > 0) {
+              userBet = { amount: bet[0], betAbove: bet[1], claimed: bet[2] };
+              if (settled && !bet[2]) {
+                const didWin = bet[1] ? (targetPrice > startPrice) : (targetPrice < startPrice);
+                canClaim = didWin;
+              }
+            }
+          } catch (e) {}
+        }
+
+        return `
+          <div class="slot-card">
+            <div class="slot-header">
+              <div class="token-name">${symbol}</div>
+              <div class="status-badge ${statusClass}">${status.toUpperCase()}</div>
+            </div>
+
+            <div class="slot-info">
+              <div class="info-item">
+                <div class="info-label">Start Price</div>
+                <div class="info-value">$${(Number(startPrice) / 1e8).toFixed(2)}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Target Price</div>
+                <div class="info-value">${settled ? '$' + (Number(targetPrice) / 1e8).toFixed(2) : '---'}</div>
+              </div>
+            </div>
+
+            <div class="pools">
+              <div class="pool">
+                <div class="pool-label">📈 Above</div>
+                <div class="pool-value">${(Number(poolAbove) / 1e18).toFixed(4)}</div>
+              </div>
+              <div class="pool">
+                <div class="pool-label">📉 Below</div>
+                <div class="pool-value">${(Number(poolBelow) / 1e18).toFixed(4)}</div>
+              </div>
+            </div>
+
+            <div class="timer" id="timer-${symbol}">--:--</div>
+
+            ${userBet ? `<div class="user-bet-info">
+              Your bet: ${(Number(userBet.amount) / 1e18).toFixed(4)} ETH ${userBet.betAbove ? '📈 Above' : '📉 Below'}
+            </div>` : ''}
+
+            <div class="bet-controls">
+              ${!settled && status === 'open' ? 
+                `<button class="btn" onclick="window.openBetModal('${symbol}', ${dayTimestamp})">Place Bet</button>` : 
+                ''}
+              ${canClaim ? 
+                `<button class="btn" onclick="window.claimReward(${dayTimestamp}, '${symbol}')">🎉 Claim Reward</button>` : 
+                ''}
+            </div>
+          </div>
+        `;
+      } catch (e) {
+        console.error(`Error loading ${symbol}:`, e);
+        return `<div class="slot-card"><p>Error loading ${symbol}</p></div>`;
+      }
+    }
+
+    async function updateTimers(dayTimestamp) {
+      for (const token of TOKENS) {
+        const timerEl = document.getElementById(`timer-${token}`);
+        if (!timerEl) continue;
+
+        try {
+          const slot = await readContract(config, {
+            address: CONTRACT_ADDRESS,
+            abi: CONTRACT_ABI,
+            functionName: 'slots',
+            args: [BigInt(dayTimestamp), token]
+          });
+
+          const [startTime, endTime, targetTime, , , , , settled] = slot;
+          const now = Math.floor(Date.now() / 1000);
+
+          if (settled) {
+            timerEl.textContent = '✅ Settled';
+            continue;
+          }
+
+          if (now < Number(endTime)) {
+            const remaining = Number(endTime) - now;
+            const mins = Math.floor(remaining / 60);
+            const secs = remaining % 60;
+            timerEl.textContent = `Betting closes in ${mins}:${secs.toString().padStart(2, '0')}`;
+          } else if (now < Number(targetTime)) {
+            const remaining = Number(targetTime) - now;
+            const mins = Math.floor(remaining / 60);
+            const secs = remaining % 60;
+            timerEl.textContent = `Settlement in ${mins}:${secs.toString().padStart(2, '0')}`;
+          } else {
+            timerEl.textContent = '⏳ Awaiting settlement...';
+          }
+        } catch (e) {
+          timerEl.textContent = '--:--';
+        }
+      }
+    }
+
+    /* ========== BET MODAL ========== */
+    let selectedBetAbove = true;
+    let modalSymbol = '';
+    let modalDayTimestamp = 0;
+
+    const betAboveBtn = document.getElementById('betAboveBtn');
+    const betBelowBtn = document.getElementById('betBelowBtn');
+    const confirmBetBtn = document.getElementById('confirmBetBtn');
+    const cancelBetBtn = document.getElementById('cancelBetBtn');
+    const modalTitle = document.getElementById('modalTitle');
+
+    window.openBetModal = (symbol, dayTimestamp) => {
+      modalSymbol = symbol;
+      modalDayTimestamp = dayTimestamp;
+      selectedBetAbove = true;
+      
+      modalTitle.textContent = `Place Bet - ${symbol}`;
+      betAboveBtn.classList.add('selected');
+      betBelowBtn.classList.remove('selected');
+      document.getElementById('betAmount').value = '';
+      
+      betModal.classList.add('show');
+    };
+
+    cancelBetBtn.onclick = () => {
+      betModal.classList.remove('show');
+    };
+
+    betAboveBtn.onclick = () => {
+      selectedBetAbove = true;
+      betAboveBtn.classList.add('selected');
+      betBelowBtn.classList.remove('selected');
+    };
+
+    betBelowBtn.onclick = () => {
+      selectedBetAbove = false;
+      betBelowBtn.classList.add('selected');
+      betAboveBtn.classList.remove('selected');
+    };
+
+    confirmBetBtn.onclick = async () => {
+      const amount = document.getElementById('betAmount').value;
+      if (!amount || parseFloat(amount) <= 0) {
+        showToast('❌ Enter valid bet amount');
+        return;
+      }
+
+      try {
+        betModal.classList.remove('show');
+        
+        const txHash = await writeContract(config, {
+          address: CONTRACT_ADDRESS,
+          abi: CONTRACT_ABI,
+          functionName: 'placeBet',
+          args: [
+            BigInt(modalDayTimestamp),
+            modalSymbol,
+            selectedBetAbove,
+            BigInt(Math.floor(parseFloat(amount) * 1e18))
+          ]
+        });
+        
+        showToast(`⏳ Bet placed! <a target="_blank" href="https://arbiscan.io/tx/${txHash}">view</a>`, 5000);
+        
+        setTimeout(() => {
+          loadSlots();
+          updateBalances();
+        }, 3000);
+      } catch (e) {
+        console.error('Bet error:', e);
+        showToast('❌ Bet failed');
+      }
+    };
+
+    /* ========== CLAIM ========== */
+    window.claimReward = async (dayTimestamp, symbol) => {
+      try {
+        const txHash = await writeContract(config, {
+          address: CONTRACT_ADDRESS,
+          abi: CONTRACT_ABI,
+          functionName: 'claim',
+          args: [BigInt(dayTimestamp), symbol]
+        });
+        
+        showToast(`🎉 Claim successful! <a target="_blank" href="https://arbiscan.io/tx/${txHash}">view</a>`, 5000);
+        
+        setTimeout(() => {
+          loadSlots();
+          updateBalances();
+        }, 3000);
+      } catch (e) {
+        console.error('Claim error:', e);
+        showToast('❌ Claim failed');
+      }
+    };
+
+    /* ========== EVENT LISTENERS ========== */
+    // Watch for Deposit events
+    watchContractEvent(config, {
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      eventName: 'Deposit',
+      args: userAddress ? { user: userAddress } : undefined,
+      onLogs: logs => {
+        logs.forEach(log => {
+          const amount = log.args?.amount?.toString?.() ?? '';
+          showToast(`✅ Deposit confirmed: ${(Number(amount) / 1e18).toFixed(4)} ETH`);
+          updateBalances();
+        });
+      }
+    });
+
+    // Watch for Withdraw events
+    watchContractEvent(config, {
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      eventName: 'Withdraw',
+      args: userAddress ? { user: userAddress } : undefined,
+      onLogs: logs => {
+        logs.forEach(log => {
+          const amount = log.args?.amount?.toString?.() ?? '';
+          showToast(`✅ Withdraw confirmed: ${(Number(amount) / 1e18).toFixed(4)} ETH`);
+          updateBalances();
+        });
+      }
+    });
+
+    // Watch for BetPlaced events
+    watchContractEvent(config, {
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      eventName: 'BetPlaced',
+      args: userAddress ? { user: userAddress } : undefined,
+      onLogs: logs => {
+        logs.forEach(log => {
+          const symbol = log.args?.symbol ?? '';
+          const amount = log.args?.amount?.toString?.() ?? '';
+          const above = log.args?.above ?? false;
+          showToast(`✅ Bet placed on ${symbol}: ${(Number(amount) / 1e18).toFixed(4)} ETH ${above ? '📈' : '📉'}`);
+          loadSlots();
+          updateBalances();
+        });
+      }
+    });
+
+    // Watch for Claimed events
+    watchContractEvent(config, {
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      eventName: 'Claimed',
+      args: userAddress ? { user: userAddress } : undefined,
+      onLogs: logs => {
+        logs.forEach(log => {
+          const symbol = log.args?.symbol ?? '';
+          const payout = log.args?.payout?.toString?.() ?? '';
+          showToast(`🎉 Claimed ${symbol}: ${(Number(payout) / 1e18).toFixed(4)} ETH`);
+          loadSlots();
+          updateBalances();
+        });
+      }
+    });
+
+    // Watch for SlotCreated events
+    watchContractEvent(config, {
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      eventName: 'SlotCreated',
+      onLogs: logs => {
+        logs.forEach(log => {
+          const symbol = log.args?.symbol ?? '';
+          showToast(`🆕 New slot created for ${symbol}`);
+          loadSlots();
+        });
+      }
+    });
+
+    // Watch for SlotSettled events
+    watchContractEvent(config, {
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      eventName: 'SlotSettled',
+      onLogs: logs => {
+        logs.forEach(log => {
+          const symbol = log.args?.symbol ?? '';
+          const targetPrice = log.args?.targetPrice?.toString?.() ?? '';
+          showToast(`✅ ${symbol} settled at ${(Number(targetPrice) / 1e8).toFixed(2)}`);
+          loadSlots();
+        });
+      }
+    });
+
+    /* ========== AUTO REFRESH ========== */
+    setInterval(() => {
+      if (!betTab.classList.contains('hidden')) {
+        loadSlots();
+      }
+      updateBalances();
+    }, 10000);
+
+    // Close modal when clicking outside
+    betModal.onclick = (e) => {
+      if (e.target === betModal) {
+        betModal.classList.remove('show');
+      }
+    };
+
+    // Initial load
+    console.log('Crypto Betting DApp Initialized');
+    console.log('Contract Address:', CONTRACT_ADDRESS);
+    console.log('User Address:', userAddress);
+  </script>
+</body>
+</html>
