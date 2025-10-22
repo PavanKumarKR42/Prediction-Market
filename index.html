@@ -14,7 +14,7 @@
       "action":{
         "type":"launch_frame",
         "name":"Crypto Price Betting",
-        "url":"https://portfolio-6sbz.vercel.app/",
+        "url":"https://your-app.vercel.app",
         "splashImageUrl":"https://your-app.vercel.app/splash.png",
         "splashBackgroundColor":"#111111"
       }
@@ -460,7 +460,7 @@
     import {
       createConfig, connect, getAccount, getBalance, readContract, writeContract, watchContractEvent, http
     } from 'https://esm.sh/@wagmi/core';
-    import { arbitrum } from 'https://esm.sh/@wagmi/core/chains';
+    import { baseSepolia } from 'https://esm.sh/@wagmi/core/chains';
     import { farcasterMiniApp } from 'https://esm.sh/@farcaster/miniapp-wagmi-connector';
 
     // Initialize Farcaster SDK
@@ -503,8 +503,8 @@
 
     /* ========== WAGMI CONFIG ========== */
     const config = createConfig({
-      chains: [arbitrum],
-      transports: { [arbitrum.id]: http() }
+      chains: [baseSepolia],
+      transports: { [baseSepolia.id]: http() }
     });
 
     let userAddress = null;
@@ -524,7 +524,7 @@
         
         await connect(config, {
           connector: farcasterMiniApp(),
-          chainId: arbitrum.id
+          chainId: baseSepolia.id
         });
 
         userAddress = getAccount(config)?.address;
@@ -625,7 +625,7 @@
           functionName: 'deposit',
           value: BigInt(Math.floor(parseFloat(amount) * 1e18))
         });
-        showToast(`⏳ Deposit pending... <a target="_blank" href="https://arbiscan.io/tx/${txHash}">view</a>`, 5000);
+        showToast(`⏳ Deposit pending... <a target="_blank" href="https://sepolia.basescan.org/tx/${txHash}">view</a>`, 5000);
         setTimeout(updateBalances, 3000);
       } catch (e) {
         showToast('❌ Deposit failed');
@@ -657,7 +657,7 @@
           functionName: 'withdraw',
           args: [BigInt(Math.floor(parseFloat(amount) * 1e18))]
         });
-        showToast(`⏳ Withdraw pending... <a target="_blank" href="https://arbiscan.io/tx/${txHash}">view</a>`, 5000);
+        showToast(`⏳ Withdraw pending... <a target="_blank" href="https://sepolia.basescan.org/tx/${txHash}">view</a>`, 5000);
         setTimeout(updateBalances, 3000);
       } catch (e) {
         showToast('❌ Withdraw failed');
