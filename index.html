@@ -507,9 +507,7 @@
       transports: { [arbitrum.id]: http() }
     });
 
-    await connect(config, { connector: farcasterMiniApp() }).catch(() => {});
-
-    let userAddress = getAccount(config)?.address;
+    let userAddress = null;
 
     /* ========== UI REFS ========== */
     const walletAddressEl = document.getElementById('walletAddress');
@@ -518,6 +516,35 @@
     const toastEl = document.getElementById('toast');
     const slotsContainer = document.getElementById('slotsContainer');
     const betModal = document.getElementById('betModal');
+
+    /* ========== AUTO CONNECT WALLET ========== */
+    async function autoConnectWallet() {
+      try {
+        walletAddressEl.textContent = 'Connecting...';
+        
+        await connect(config, {
+          connector: farcasterMiniApp(),
+          chainId: arbitrum.id
+        });
+
+        userAddress = getAccount(config)?.address;
+
+        if (userAddress) {
+          walletAddressEl.textContent = `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`;
+          showToast(`✅ Connected: ${userAddress.slice(0, 6)}…${userAddress.slice(-4)}`);
+          await updateBalances();
+        } else {
+          throw new Error("No address returned");
+        }
+      } catch (err) {
+        console.error("Auto connect failed:", err);
+        walletAddressEl.textContent = 'Not Connected';
+        showToast("⚠️ Connection failed. Open in Warpcast.", 5000);
+      }
+    }
+
+    // Auto-connect on load
+    autoConnectWallet();
 
     // Tabs
     const walletTab = document.getElementById('walletTab');
@@ -550,7 +577,11 @@
 
     /* ========== WALLET FUNCTIONS ========== */
     async function updateBalances() {
-      if (!userAddress) return;
+      if (!userAddress) {
+        walletBalanceEl.textContent = '-- ETH';
+        contractBalanceEl.textContent = '-- ETH';
+        return;
+      }
 
       try {
         const balance = await getBalance(config, { address: userAddress });
@@ -565,12 +596,9 @@
         contractBalanceEl.textContent = `${(Number(contractBal) / 1e18).toFixed(4)} ETH`;
       } catch (e) {
         console.error('Balance update error:', e);
+        walletBalanceEl.textContent = '-- ETH';
+        contractBalanceEl.textContent = '-- ETH';
       }
-    }
-
-    if (userAddress) {
-      walletAddressEl.textContent = `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`;
-      updateBalances();
     }
 
     // Deposit
