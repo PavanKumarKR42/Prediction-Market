@@ -621,6 +621,9 @@
     });
 
     let userAddress = null;
+    let currentActiveTab = 'wallet';
+    let timerInterval = null;
+    
     const walletAddressEl = document.getElementById('walletAddress');
     const walletBalanceEl = document.getElementById('walletBalance');
     const contractBalanceEl = document.getElementById('contractBalance');
@@ -662,6 +665,14 @@
     document.getElementById('tabClaimBtn').onclick = () => switchTab('claim');
 
     function switchTab(tab) {
+      currentActiveTab = tab;
+      
+      // Clear timer interval when switching tabs
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+      
       walletTab.classList.add('hidden');
       betTab.classList.add('hidden');
       claimTab.classList.add('hidden');
@@ -770,8 +781,6 @@
       }
     };
 
-    let refreshInterval = null;
-
     async function loadSlots() {
       try {
         const lastSlotTime = await readContract(config, {
@@ -782,11 +791,8 @@
 
         const dayTimestamp = Number(lastSlotTime);
         const now = Math.floor(Date.now() / 1000);
-        
-        // Check if we should be looking at current or previous slot
         const timeSinceLastSlot = now - dayTimestamp;
         
-        // If more than 3 minutes (180s) passed, slot should be settled and new one created
         if (timeSinceLastSlot >= 180) {
           slotsContainer.innerHTML = '<p style="text-align: center; color: #ffd166; padding: 20px;">⏳ Waiting for new slot...<br><small style="color: #666;">Keeper will create new slot soon</small></p>';
           setTimeout(loadSlots, 5000);
@@ -810,8 +816,12 @@
         const html = await Promise.all(htmlPromises);
         slotsContainer.innerHTML = html.join('');
 
-        if (refreshInterval) clearInterval(refreshInterval);
-        refreshInterval = setInterval(() => updateTimers(dayTimestamp), 1000);
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+          if (currentActiveTab === 'bet') {
+            updateTimers(dayTimestamp);
+          }
+        }, 1000);
       } catch (e) {
         console.error('Load slots error:', e);
         slotsContainer.innerHTML = '<p style="text-align: center; color: #f88;">Failed to load slots. Please refresh.</p>';
@@ -1029,7 +1039,8 @@
         let wonCount = 0;
         let lostCount = 0;
 
-        for (let i = 0; i < 10; i++) {
+        // Look back 100 slots (5 hours) to find all bets
+        for (let i = 0; i < 100; i++) {
           const timestamp = currentTimestamp - (i * 180);
           
           for (const token of TOKENS) {
@@ -1062,7 +1073,10 @@
                     const userPool = betAbove ? poolAbove : poolBelow;
                     const oppositePool = betAbove ? poolBelow : poolAbove;
                     const totalPool = Number(userPool) + Number(oppositePool);
-                    const payout = totalPool > 0 ? (Number(betAmount) * totalPool) / Number(userPool) : Number(betAmount);
+                    
+                    // Handle edge case: if user pool is 0, just return bet amount
+                    const payout = (Number(userPool) === 0) ? Number(betAmount) : 
+                                   (totalPool > 0 ? (Number(betAmount) * totalPool) / Number(userPool) : Number(betAmount));
                     
                     if (!claimed) {
                       totalWinnings += payout / 1e18;
@@ -1085,7 +1099,7 @@
                 }
               }
             } catch (e) {
-              console.log(`No bet for ${token} at ${timestamp}`);
+              // Slot doesn't exist or no bet, continue
             }
           }
         }
@@ -1107,7 +1121,7 @@
 
       } catch (e) {
         console.error('Load claims error:', e);
-        claimContainer.innerHTML = '<p style="text-align: center; color: #f88;">Failed to load claims</p>';
+        claimContainer.innerHTML = '<p style="text-align: center; color: #f88;">Failed to load claims. Please try again.</p>';
       }
     }
 
@@ -1134,7 +1148,10 @@
         const userPool = bet.betAbove ? poolAbove : poolBelow;
         const oppositePool = bet.betAbove ? poolBelow : poolAbove;
         const totalPool = Number(userPool) + Number(oppositePool);
-        payout = totalPool > 0 ? (Number(bet.amount) * totalPool) / Number(userPool) : Number(bet.amount);
+        
+        // Handle edge case: if user pool is 0, just return bet amount
+        payout = (Number(userPool) === 0) ? Number(bet.amount) : 
+                 (totalPool > 0 ? (Number(bet.amount) * totalPool) / Number(userPool) : Number(bet.amount));
       }
 
       const date = new Date(timestamp * 1000);
@@ -1260,7 +1277,7 @@
         }, 3000);
       } catch (e) {
         console.error('Bet error:', e);
-        showToast('❌ Bet failed');
+        showToast('❌ Bet failed: ' + (e.message || 'Unknown error'));
       }
     };
 
@@ -1282,109 +1299,100 @@
         }, 3000);
       } catch (e) {
         console.error('Claim error:', e);
-        showToast('❌ Claim failed');
+        showToast('❌ Claim failed: ' + (e.message || 'Unknown error'));
       }
     };
 
-    watchContractEvent(config, {
-      address: CONTRACT_ADDRESS,
-      abi: CONTRACT_ABI,
-      eventName: 'Deposit',
-      args: userAddress ? { user: userAddress } : undefined,
-      onLogs: logs => {
-        logs.forEach(log => {
-          const amount = log.args?.amount?.toString?.() ?? '';
-          showToast(`✅ Deposit confirmed: ${(Number(amount) / 1e18).toFixed(4)} ETH`);
-          updateBalances();
-        });
-      }
-    });
+    // Setup event watchers - only once
+    let eventWatchersSetup = false;
+    
+    function setupEventWatchers() {
+      if (eventWatchersSetup) return;
+      eventWatchersSetup = true;
 
-    watchContractEvent(config, {
-      address: CONTRACT_ADDRESS,
-      abi: CONTRACT_ABI,
-      eventName: 'Withdraw',
-      args: userAddress ? { user: userAddress } : undefined,
-      onLogs: logs => {
-        logs.forEach(log => {
-          const amount = log.args?.amount?.toString?.() ?? '';
-          showToast(`✅ Withdraw confirmed: ${(Number(amount) / 1e18).toFixed(4)} ETH`);
-          updateBalances();
-        });
-      }
-    });
+      watchContractEvent(config, {
+        address: CONTRACT_ADDRESS,
+        abi: CONTRACT_ABI,
+        eventName: 'BetPlaced',
+        onLogs: logs => {
+          logs.forEach(log => {
+            if (log.args?.user?.toLowerCase() === userAddress?.toLowerCase()) {
+              const symbol = log.args?.symbol ?? '';
+              const amount = log.args?.amount?.toString?.() ?? '';
+              const above = log.args?.above ?? false;
+              showToast(`✅ Bet placed on ${symbol}: ${(Number(amount) / 1e18).toFixed(4)} ETH ${above ? '📈' : '📉'}`);
+              if (currentActiveTab === 'bet') loadSlots();
+              updateBalances();
+            }
+          });
+        }
+      });
 
-    watchContractEvent(config, {
-      address: CONTRACT_ADDRESS,
-      abi: CONTRACT_ABI,
-      eventName: 'BetPlaced',
-      args: userAddress ? { user: userAddress } : undefined,
-      onLogs: logs => {
-        logs.forEach(log => {
-          const symbol = log.args?.symbol ?? '';
-          const amount = log.args?.amount?.toString?.() ?? '';
-          const above = log.args?.above ?? false;
-          showToast(`✅ Bet placed on ${symbol}: ${(Number(amount) / 1e18).toFixed(4)} ETH ${above ? '📈' : '📉'}`);
-          loadSlots();
-          updateBalances();
-        });
-      }
-    });
+      watchContractEvent(config, {
+        address: CONTRACT_ADDRESS,
+        abi: CONTRACT_ABI,
+        eventName: 'Claimed',
+        onLogs: logs => {
+          logs.forEach(log => {
+            if (log.args?.user?.toLowerCase() === userAddress?.toLowerCase()) {
+              const symbol = log.args?.symbol ?? '';
+              const payout = log.args?.payout?.toString?.() ?? '';
+              showToast(`🎉 Claimed ${symbol}: ${(Number(payout) / 1e18).toFixed(4)} ETH`);
+              if (currentActiveTab === 'bet') loadSlots();
+              if (currentActiveTab === 'claim') loadClaims();
+              updateBalances();
+            }
+          });
+        }
+      });
 
-    watchContractEvent(config, {
-      address: CONTRACT_ADDRESS,
-      abi: CONTRACT_ABI,
-      eventName: 'Claimed',
-      args: userAddress ? { user: userAddress } : undefined,
-      onLogs: logs => {
-        logs.forEach(log => {
-          const symbol = log.args?.symbol ?? '';
-          const payout = log.args?.payout?.toString?.() ?? '';
-          showToast(`🎉 Claimed ${symbol}: ${(Number(payout) / 1e18).toFixed(4)} ETH`);
-          loadSlots();
-          loadClaims();
-          updateBalances();
-        });
-      }
-    });
+      watchContractEvent(config, {
+        address: CONTRACT_ADDRESS,
+        abi: CONTRACT_ABI,
+        eventName: 'SlotCreated',
+        onLogs: logs => {
+          if (currentActiveTab === 'bet') {
+            logs.forEach(log => {
+              const symbol = log.args?.symbol ?? '';
+              if (symbol === 'BTC') {
+                showToast(`🆕 New slot created!`);
+                loadSlots();
+              }
+            });
+          }
+        }
+      });
 
-    watchContractEvent(config, {
-      address: CONTRACT_ADDRESS,
-      abi: CONTRACT_ABI,
-      eventName: 'SlotCreated',
-      onLogs: logs => {
-        logs.forEach(log => {
-          const symbol = log.args?.symbol ?? '';
-          showToast(`🆕 New slot created for ${symbol}`);
-          loadSlots();
-        });
-      }
-    });
+      watchContractEvent(config, {
+        address: CONTRACT_ADDRESS,
+        abi: CONTRACT_ABI,
+        eventName: 'SlotSettled',
+        onLogs: logs => {
+          logs.forEach(log => {
+            const symbol = log.args?.symbol ?? '';
+            const targetPrice = log.args?.targetPrice?.toString?.() ?? '';
+            if (symbol === 'BTC') {
+              showToast(`✅ Slots settled!`);
+              if (currentActiveTab === 'bet') loadSlots();
+              if (currentActiveTab === 'claim') loadClaims();
+            }
+          });
+        }
+      });
+    }
 
-    watchContractEvent(config, {
-      address: CONTRACT_ADDRESS,
-      abi: CONTRACT_ABI,
-      eventName: 'SlotSettled',
-      onLogs: logs => {
-        logs.forEach(log => {
-          const symbol = log.args?.symbol ?? '';
-          const targetPrice = log.args?.targetPrice?.toString?.() ?? '';
-          showToast(`✅ ${symbol} settled at ${(Number(targetPrice) / 1e8).toFixed(2)}`);
-          loadSlots();
-          loadClaims();
-        });
-      }
-    });
+    // Setup watchers after connection
+    setTimeout(setupEventWatchers, 2000);
 
+    // Auto refresh every 15 seconds
     setInterval(() => {
-      if (!betTab.classList.contains('hidden')) {
+      if (currentActiveTab === 'bet') {
         loadSlots();
-      }
-      if (!claimTab.classList.contains('hidden')) {
+      } else if (currentActiveTab === 'claim') {
         loadClaims();
       }
       updateBalances();
-    }, 10000);
+    }, 15000);
 
     betModal.onclick = (e) => {
       if (e.target === betModal) {
@@ -1392,11 +1400,11 @@
       }
     };
 
-    console.log('Crypto Betting DApp Initialized');
-    console.log('Contract:', CONTRACT_ADDRESS);
-    console.log('User:', userAddress);
-    console.log('Tokens: BTC, ETH');
-    console.log('Betting: 2 min | Total: 3 min');
+    console.log('🎲 Crypto Betting DApp Initialized');
+    console.log('📍 Contract:', CONTRACT_ADDRESS);
+    console.log('👤 User:', userAddress || 'Not connected');
+    console.log('💰 Tokens: BTC, ETH');
+    console.log('⏱️ Betting: 2 min | Total: 3 min');
   </script>
 </body>
 </html>
