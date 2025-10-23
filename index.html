@@ -128,6 +128,11 @@
       border: 1px solid #444;
     }
 
+    .btn-claim {
+      background: #7ee027;
+      color: #000;
+    }
+
     .input-group {
       margin: 12px 0;
     }
@@ -163,6 +168,11 @@
       padding: 14px;
     }
 
+    .claim-card {
+      background: linear-gradient(135deg, #1a2a1a 0%, #1a1a1a 100%);
+      border: 1px solid #3a5a3a;
+    }
+
     .slot-header {
       display: flex;
       justify-content: space-between;
@@ -196,6 +206,21 @@
     .status-settled {
       background: #2a3a4a;
       color: #64b5f6;
+    }
+
+    .status-won {
+      background: #2d5016;
+      color: #7ee027;
+    }
+
+    .status-lost {
+      background: #4a1e1e;
+      color: #ff6b6b;
+    }
+
+    .status-claimed {
+      background: #3a3a2a;
+      color: #ffd166;
     }
 
     .slot-info {
@@ -379,6 +404,63 @@
       font-size: 12px;
       color: #aaa;
     }
+
+    .claim-stats {
+      display: flex;
+      justify-content: space-around;
+      padding: 12px;
+      background: #0f0f0f;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+
+    .claim-stat {
+      text-align: center;
+    }
+
+    .claim-stat-label {
+      font-size: 11px;
+      color: #888;
+      margin-bottom: 4px;
+    }
+
+    .claim-stat-value {
+      font-size: 18px;
+      font-weight: 800;
+      color: #7ee027;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #666;
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+
+    .payout-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      background: #0f0f0f;
+      border-radius: 8px;
+      margin: 8px 0;
+    }
+
+    .payout-label {
+      font-size: 12px;
+      color: #888;
+    }
+
+    .payout-value {
+      font-size: 16px;
+      font-weight: 800;
+      color: #7ee027;
+    }
   </style>
 </head>
 <body>
@@ -405,6 +487,7 @@
   <div class="tabbar">
     <button id="tabWalletBtn" class="active">Wallet</button>
     <button id="tabBetBtn">Bet</button>
+    <button id="tabClaimBtn">Claim</button>
   </div>
 
   <!-- Wallet Tab -->
@@ -431,6 +514,23 @@
   <section id="betTab" class="section hidden">
     <div id="slotsContainer" class="slots-container">
       <p style="text-align: center; color: #888;">Loading slots...</p>
+    </div>
+  </section>
+
+  <!-- Claim Tab -->
+  <section id="claimTab" class="section hidden">
+    <div class="claim-stats">
+      <div class="claim-stat">
+        <div class="claim-stat-label">Available</div>
+        <div class="claim-stat-value" id="claimableCount">0</div>
+      </div>
+      <div class="claim-stat">
+        <div class="claim-stat-label">Total Winnings</div>
+        <div class="claim-stat-value" id="totalWinnings">0 ETH</div>
+      </div>
+    </div>
+    <div id="claimContainer" class="slots-container">
+      <p style="text-align: center; color: #888;">Loading claims...</p>
     </div>
   </section>
 
@@ -468,38 +568,23 @@
     import { baseSepolia } from 'https://esm.sh/@wagmi/core/chains';
     import { farcasterMiniApp } from 'https://esm.sh/@farcaster/miniapp-wagmi-connector';
 
-sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
+    sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
       console.log("Farcaster MiniApp ready");
-      message.innerText = "Ready to connect!";
-      
-      // Show rules on first visit
-      const hasSeenRules = localStorage.getItem('hasSeenRules');
-      if (!hasSeenRules) {
-        setTimeout(() => {
-          document.getElementById('rulesOverlay').classList.remove('hidden');
-        }, 300);
-      }
 
-      // Auto-prompt to add app (only once per session)
       const hasPromptedAddApp = sessionStorage.getItem('hasPromptedAddApp');
       if (!hasPromptedAddApp) {
         try {
-          console.log('Auto-prompting add app...');
           await sdk.actions.addMiniApp();
           sessionStorage.setItem('hasPromptedAddApp', 'true');
-          console.log('App added successfully!');
         } catch (error) {
-          console.log('Add app prompt dismissed or failed:', error.name);
           sessionStorage.setItem('hasPromptedAddApp', 'true');
         }
       }
-
     }).catch(err => {
       console.error("SDK ready error:", err);
-      message.innerText = "SDK initialization failed";
       showToast("Failed to initialize. Try reloading.");
     });
-    /* ========== CONTRACT CONFIG ========== */
+
     const CONTRACT_ADDRESS = '0x6460E8fD8E347Be77D2F8c395ba65e7A7C276850';
     const CONTRACT_ABI = [{"inputs":[{"internalType":"address","name":"_btcFeed","type":"address"},{"internalType":"address","name":"_ethFeed","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"day","type":"uint256"},{"indexed":false,"internalType":"string","name":"symbol","type":"string"},{"indexed":false,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"bool","name":"above","type":"bool"}],"name":"BetPlaced","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"day","type":"uint256"},{"indexed":false,"internalType":"string","name":"symbol","type":"string"},{"indexed":false,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"payout","type":"uint256"}],"name":"Claimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Deposit","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"day","type":"uint256"},{"indexed":false,"internalType":"string","name":"symbol","type":"string"},{"indexed":false,"internalType":"int256","name":"price","type":"int256"}],"name":"SlotCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"day","type":"uint256"},{"indexed":false,"internalType":"string","name":"symbol","type":"string"},{"indexed":false,"internalType":"int256","name":"targetPrice","type":"int256"}],"name":"SlotSettled","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Withdraw","type":"event"},{"inputs":[],"name":"MIN_DEPOSIT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"balances","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"string","name":"","type":"string"},{"internalType":"address","name":"","type":"address"}],"name":"bets","outputs":[{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"bool","name":"betAbove","type":"bool"},{"internalType":"bool","name":"claimed","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"bettingWindow","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"btcFeed","outputs":[{"internalType":"contract IPriceFeed","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes","name":"","type":"bytes"}],"name":"checkUpkeep","outputs":[{"internalType":"bool","name":"upkeepNeeded","type":"bool"},{"internalType":"bytes","name":"","type":"bytes"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"dayTimestamp","type":"uint256"},{"internalType":"string","name":"symbol","type":"string"}],"name":"claim","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"deposit","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"ethFeed","outputs":[{"internalType":"contract IPriceFeed","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"dayTimestamp","type":"uint256"},{"internalType":"string","name":"symbol","type":"string"}],"name":"getSlotPool","outputs":[{"internalType":"uint256","name":"poolAbove","type":"uint256"},{"internalType":"uint256","name":"poolBelow","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"lastSlotTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes","name":"","type":"bytes"}],"name":"performUpkeep","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"dayTimestamp","type":"uint256"},{"internalType":"string","name":"symbol","type":"string"},{"internalType":"bool","name":"betAbove","type":"bool"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"placeBet","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"settlementTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"string","name":"","type":"string"}],"name":"slots","outputs":[{"internalType":"uint256","name":"startTime","type":"uint256"},{"internalType":"uint256","name":"endTime","type":"uint256"},{"internalType":"uint256","name":"targetTime","type":"uint256"},{"internalType":"uint256","name":"poolAbove","type":"uint256"},{"internalType":"uint256","name":"poolBelow","type":"uint256"},{"internalType":"int256","name":"startPrice","type":"int256"},{"internalType":"int256","name":"targetPrice","type":"int256"},{"internalType":"bool","name":"settled","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"}];
 
@@ -515,6 +600,7 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
     const contractBalanceEl = document.getElementById('contractBalance');
     const toastEl = document.getElementById('toast');
     const slotsContainer = document.getElementById('slotsContainer');
+    const claimContainer = document.getElementById('claimContainer');
     const betModal = document.getElementById('betModal');
 
     async function autoConnectWallet() {
@@ -543,22 +629,31 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
 
     const walletTab = document.getElementById('walletTab');
     const betTab = document.getElementById('betTab');
+    const claimTab = document.getElementById('claimTab');
     
     document.getElementById('tabWalletBtn').onclick = () => switchTab('wallet');
     document.getElementById('tabBetBtn').onclick = () => switchTab('bet');
+    document.getElementById('tabClaimBtn').onclick = () => switchTab('claim');
 
     function switchTab(tab) {
+      walletTab.classList.add('hidden');
+      betTab.classList.add('hidden');
+      claimTab.classList.add('hidden');
+      document.getElementById('tabWalletBtn').classList.remove('active');
+      document.getElementById('tabBetBtn').classList.remove('active');
+      document.getElementById('tabClaimBtn').classList.remove('active');
+
       if (tab === 'wallet') {
         walletTab.classList.remove('hidden');
-        betTab.classList.add('hidden');
         document.getElementById('tabWalletBtn').classList.add('active');
-        document.getElementById('tabBetBtn').classList.remove('active');
-      } else {
+      } else if (tab === 'bet') {
         betTab.classList.remove('hidden');
-        walletTab.classList.add('hidden');
         document.getElementById('tabBetBtn').classList.add('active');
-        document.getElementById('tabWalletBtn').classList.remove('active');
         loadSlots();
+      } else if (tab === 'claim') {
+        claimTab.classList.remove('hidden');
+        document.getElementById('tabClaimBtn').classList.add('active');
+        loadClaims();
       }
     }
 
@@ -661,7 +756,6 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
 
         const dayTimestamp = Number(lastSlotTime);
         
-        // Try to load the current slot
         const btcSlot = await readContract(config, {
           address: CONTRACT_ADDRESS,
           abi: CONTRACT_ABI,
@@ -669,23 +763,18 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
           args: [BigInt(dayTimestamp), 'BTC']
         });
 
-        // If current slot doesn't exist or is settled, it might be creating a new one
         if (Number(btcSlot[0]) === 0) {
           slotsContainer.innerHTML = '<p style="text-align: center; color: #888; padding: 20px;">⏳ Waiting for slot to be created...<br><small style="color: #666;">Slots are created automatically every 3 minutes</small></p>';
-          // Keep checking
           setTimeout(loadSlots, 3000);
           return;
         }
 
-        // Check if slot is settled but keeper hasn't created new one yet
-        if (btcSlot[7]) { // settled = true
+        if (btcSlot[7]) {
           const now = Math.floor(Date.now() / 1000);
           const targetTime = Number(btcSlot[2]);
           
-          // If we're past settlement time and slot is settled, keeper should create new one soon
           if (now > targetTime) {
             slotsContainer.innerHTML = '<p style="text-align: center; color: #ffd166; padding: 20px;">⏳ Round completed! Waiting for next round...<br><small style="color: #666;">New round starting soon</small></p>';
-            // Keep checking for new slot
             setTimeout(loadSlots, 3000);
             return;
           }
@@ -771,11 +860,11 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
             <div class="slot-info">
               <div class="info-item">
                 <div class="info-label">Start Price</div>
-                <div class="info-value">$${(Number(startPrice) / 1e8).toFixed(2)}</div>
+                <div class="info-value">${(Number(startPrice) / 1e8).toFixed(2)}</div>
               </div>
               <div class="info-item">
                 <div class="info-label">Final Price ${settled ? '✅' : '⏳'}</div>
-                <div class="info-value">${settled ? '$' + (Number(targetPrice) / 1e8).toFixed(2) : 'TBD'}</div>
+                <div class="info-value">${settled ? (Number(targetPrice) / 1e8).toFixed(2) : 'TBD'}</div>
               </div>
             </div>
 
@@ -874,6 +963,177 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
       }
     }
 
+    async function loadClaims() {
+      if (!userAddress) {
+        claimContainer.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔌</div><p>Please connect wallet first</p></div>';
+        return;
+      }
+
+      try {
+        claimContainer.innerHTML = '<p style="text-align: center; color: #888;">Loading claims...</p>';
+        
+        const lastSlotTime = await readContract(config, {
+          address: CONTRACT_ADDRESS,
+          abi: CONTRACT_ABI,
+          functionName: 'lastSlotTime'
+        });
+
+        const currentTimestamp = Number(lastSlotTime);
+        const claims = [];
+        let totalWinnings = 0;
+        let claimableCount = 0;
+
+        for (let i = 0; i < 10; i++) {
+          const timestamp = currentTimestamp - (i * 180);
+          
+          for (const token of TOKENS) {
+            try {
+              const slot = await readContract(config, {
+                address: CONTRACT_ADDRESS,
+                abi: CONTRACT_ABI,
+                functionName: 'slots',
+                args: [BigInt(timestamp), token]
+              });
+
+              if (Number(slot[0]) === 0) continue;
+
+              const bet = await readContract(config, {
+                address: CONTRACT_ADDRESS,
+                abi: CONTRACT_ABI,
+                functionName: 'bets',
+                args: [BigInt(timestamp), token, userAddress]
+              });
+
+              if (Number(bet[0]) > 0) {
+                const [startTime, endTime, targetTime, poolAbove, poolBelow, startPrice, targetPrice, settled] = slot;
+                const [betAmount, betAbove, claimed] = bet;
+
+                if (settled) {
+                  const didWin = betAbove ? (targetPrice > startPrice) : (targetPrice < startPrice);
+                  
+                  if (didWin && !claimed) {
+                    const userPool = betAbove ? poolAbove : poolBelow;
+                    const oppositePool = betAbove ? poolBelow : poolAbove;
+                    const totalPool = Number(userPool) + Number(oppositePool);
+                    const payout = totalPool > 0 ? (Number(betAmount) * totalPool) / Number(userPool) : Number(betAmount);
+                    
+                    totalWinnings += payout / 1e18;
+                    claimableCount++;
+                  }
+
+                  claims.push({
+                    timestamp,
+                    token,
+                    slot,
+                    bet: { amount: betAmount, betAbove, claimed },
+                    didWin,
+                    settled: true
+                  });
+                }
+              }
+            } catch (e) {
+              console.log(`No bet for ${token} at ${timestamp}`);
+            }
+          }
+        }
+
+        document.getElementById('claimableCount').textContent = claimableCount;
+        document.getElementById('totalWinnings').textContent = `${totalWinnings.toFixed(4)} ETH`;
+
+        if (claims.length === 0) {
+          claimContainer.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No bets found</p><small style="color: #666;">Place some bets first!</small></div>';
+          return;
+        }
+
+        const claimCards = claims.map(claim => renderClaimCard(claim));
+        claimContainer.innerHTML = claimCards.join('');
+
+      } catch (e) {
+        console.error('Load claims error:', e);
+        claimContainer.innerHTML = '<p style="text-align: center; color: #f88;">Failed to load claims</p>';
+      }
+    }
+
+    function renderClaimCard(claim) {
+      const { timestamp, token, slot, bet, didWin, settled } = claim;
+      const [startTime, endTime, targetTime, poolAbove, poolBelow, startPrice, targetPrice, isSettled] = slot;
+      
+      let statusClass = 'status-settled';
+      let statusText = 'SETTLED';
+      
+      if (bet.claimed) {
+        statusClass = 'status-claimed';
+        statusText = 'CLAIMED ✓';
+      } else if (didWin) {
+        statusClass = 'status-won';
+        statusText = 'WON! 🎉';
+      } else {
+        statusClass = 'status-lost';
+        statusText = 'LOST';
+      }
+
+      let payout = 0;
+      if (didWin && !bet.claimed) {
+        const userPool = bet.betAbove ? poolAbove : poolBelow;
+        const oppositePool = bet.betAbove ? poolBelow : poolAbove;
+        const totalPool = Number(userPool) + Number(oppositePool);
+        payout = totalPool > 0 ? (Number(bet.amount) * totalPool) / Number(userPool) : Number(bet.amount);
+      }
+
+      const date = new Date(timestamp * 1000);
+      const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+      return `
+        <div class="slot-card ${didWin && !bet.claimed ? 'claim-card' : ''}">
+          <div class="slot-header">
+            <div class="token-name">${token}</div>
+            <div class="status-badge ${statusClass}">${statusText}</div>
+          </div>
+
+          <div style="font-size: 11px; color: #666; margin-bottom: 8px;">
+            ${timeStr} • Slot #${timestamp}
+          </div>
+
+          <div class="slot-info">
+            <div class="info-item">
+              <div class="info-label">Start Price</div>
+              <div class="info-value">${(Number(startPrice) / 1e8).toFixed(2)}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Final Price</div>
+              <div class="info-value">${(Number(targetPrice) / 1e8).toFixed(2)}</div>
+            </div>
+          </div>
+
+          <div class="user-bet-info">
+            Your bet: ${(Number(bet.amount) / 1e18).toFixed(4)} ETH ${bet.betAbove ? '📈 Above' : '📉 Below'}
+          </div>
+
+          ${didWin && !bet.claimed ? `
+            <div class="payout-info">
+              <span class="payout-label">Your Winnings:</span>
+              <span class="payout-value">${(payout / 1e18).toFixed(4)} ETH</span>
+            </div>
+            <button class="btn btn-claim" onclick="window.claimReward(${timestamp}, '${token}')">
+              🎉 Claim ${(payout / 1e18).toFixed(4)} ETH
+            </button>
+          ` : ''}
+
+          ${bet.claimed ? `
+            <div style="text-align: center; color: #ffd166; font-size: 12px; padding: 8px; background: #0f0f0f; border-radius: 6px;">
+              ✅ Already claimed
+            </div>
+          ` : ''}
+
+          ${!didWin ? `
+            <div style="text-align: center; color: #888; font-size: 12px; padding: 8px;">
+              Price went ${bet.betAbove ? 'down' : 'up'} • Better luck next time!
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
     let selectedBetAbove = true;
     let modalSymbol = '';
     let modalDayTimestamp = 0;
@@ -960,6 +1220,7 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
         
         setTimeout(() => {
           loadSlots();
+          loadClaims();
           updateBalances();
         }, 3000);
       } catch (e) {
@@ -1024,6 +1285,7 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
           const payout = log.args?.payout?.toString?.() ?? '';
           showToast(`🎉 Claimed ${symbol}: ${(Number(payout) / 1e18).toFixed(4)} ETH`);
           loadSlots();
+          loadClaims();
           updateBalances();
         });
       }
@@ -1052,6 +1314,7 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
           const targetPrice = log.args?.targetPrice?.toString?.() ?? '';
           showToast(`✅ ${symbol} settled at ${(Number(targetPrice) / 1e8).toFixed(2)}`);
           loadSlots();
+          loadClaims();
         });
       }
     });
@@ -1059,6 +1322,9 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
     setInterval(() => {
       if (!betTab.classList.contains('hidden')) {
         loadSlots();
+      }
+      if (!claimTab.classList.contains('hidden')) {
+        loadClaims();
       }
       updateBalances();
     }, 10000);
