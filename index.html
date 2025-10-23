@@ -781,6 +781,17 @@
         });
 
         const dayTimestamp = Number(lastSlotTime);
+        const now = Math.floor(Date.now() / 1000);
+        
+        // Check if we should be looking at current or previous slot
+        const timeSinceLastSlot = now - dayTimestamp;
+        
+        // If more than 3 minutes (180s) passed, slot should be settled and new one created
+        if (timeSinceLastSlot >= 180) {
+          slotsContainer.innerHTML = '<p style="text-align: center; color: #ffd166; padding: 20px;">⏳ Waiting for new slot...<br><small style="color: #666;">Keeper will create new slot soon</small></p>';
+          setTimeout(loadSlots, 5000);
+          return;
+        }
         
         const btcSlot = await readContract(config, {
           address: CONTRACT_ADDRESS,
@@ -793,17 +804,6 @@
           slotsContainer.innerHTML = '<p style="text-align: center; color: #888; padding: 20px;">⏳ Waiting for slot to be created...<br><small style="color: #666;">Slots are created automatically every 3 minutes</small></p>';
           setTimeout(loadSlots, 3000);
           return;
-        }
-
-        if (btcSlot[7]) {
-          const now = Math.floor(Date.now() / 1000);
-          const targetTime = Number(btcSlot[2]);
-          
-          if (now > targetTime) {
-            slotsContainer.innerHTML = '<p style="text-align: center; color: #ffd166; padding: 20px;">⏳ Round completed! Waiting for next round...<br><small style="color: #666;">New round starting soon</small></p>';
-            setTimeout(loadSlots, 3000);
-            return;
-          }
         }
 
         const htmlPromises = TOKENS.map(token => renderSlotCard(dayTimestamp, token));
