@@ -660,6 +660,8 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
         });
 
         const dayTimestamp = Number(lastSlotTime);
+        
+        // Try to load the current slot
         const btcSlot = await readContract(config, {
           address: CONTRACT_ADDRESS,
           abi: CONTRACT_ABI,
@@ -667,9 +669,26 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
           args: [BigInt(dayTimestamp), 'BTC']
         });
 
+        // If current slot doesn't exist or is settled, it might be creating a new one
         if (Number(btcSlot[0]) === 0) {
-          slotsContainer.innerHTML = '<p style="text-align: center; color: #888; padding: 20px;">⏳ Waiting for first slot to be created...<br><small style="color: #666;">Slots are created automatically every 3 minutes</small></p>';
+          slotsContainer.innerHTML = '<p style="text-align: center; color: #888; padding: 20px;">⏳ Waiting for slot to be created...<br><small style="color: #666;">Slots are created automatically every 3 minutes</small></p>';
+          // Keep checking
+          setTimeout(loadSlots, 3000);
           return;
+        }
+
+        // Check if slot is settled but keeper hasn't created new one yet
+        if (btcSlot[7]) { // settled = true
+          const now = Math.floor(Date.now() / 1000);
+          const targetTime = Number(btcSlot[2]);
+          
+          // If we're past settlement time and slot is settled, keeper should create new one soon
+          if (now > targetTime) {
+            slotsContainer.innerHTML = '<p style="text-align: center; color: #ffd166; padding: 20px;">⏳ Round completed! Waiting for next round...<br><small style="color: #666;">New round starting soon</small></p>';
+            // Keep checking for new slot
+            setTimeout(loadSlots, 3000);
+            return;
+          }
         }
 
         const htmlPromises = TOKENS.map(token => renderSlotCard(dayTimestamp, token));
