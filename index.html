@@ -256,11 +256,6 @@
       margin-top: 12px;
     }
 
-    .bet-buttons {
-      display: flex;
-      gap: 8px;
-    }
-
     .timer {
       text-align: center;
       padding: 8px;
@@ -374,6 +369,16 @@
       background: #0f0f0f;
       border-radius: 6px;
     }
+
+    .bet-hint {
+      text-align: center;
+      margin: 8px 0;
+      padding: 8px;
+      background: #0f0f0f;
+      border-radius: 6px;
+      font-size: 12px;
+      color: #aaa;
+    }
   </style>
 </head>
 <body>
@@ -463,53 +468,19 @@
     import { baseSepolia } from 'https://esm.sh/@wagmi/core/chains';
     import { farcasterMiniApp } from 'https://esm.sh/@farcaster/miniapp-wagmi-connector';
 
-    // Initialize Farcaster SDK
-sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
-      console.log("Farcaster MiniApp ready");
-      message.innerText = "Ready to connect!";
-      
-      // Show rules on first visit
-      const hasSeenRules = localStorage.getItem('hasSeenRules');
-      if (!hasSeenRules) {
-        setTimeout(() => {
-          document.getElementById('rulesOverlay').classList.remove('hidden');
-        }, 300);
-      }
+    sdk.actions.ready({ disableNativeGestures: true });
 
-      // Auto-prompt to add app (only once per session)
-      const hasPromptedAddApp = sessionStorage.getItem('hasPromptedAddApp');
-      if (!hasPromptedAddApp) {
-        try {
-          console.log('Auto-prompting add app...');
-          await sdk.actions.addMiniApp();
-          sessionStorage.setItem('hasPromptedAddApp', 'true');
-          console.log('App added successfully!');
-        } catch (error) {
-          console.log('Add app prompt dismissed or failed:', error.name);
-          sessionStorage.setItem('hasPromptedAddApp', 'true');
-        }
-      }
-
-    }).catch(err => {
-      console.error("SDK ready error:", err);
-      message.innerText = "SDK initialization failed";
-      showToast("Failed to initialize. Try reloading.");
-    });
     /* ========== CONTRACT CONFIG ========== */
     const CONTRACT_ADDRESS = '0x55B542A0DDbFB2Db0E209AbCdFDea4F8C5F6440E';
     const CONTRACT_ABI = [{"inputs":[{"internalType":"address","name":"_btcFeed","type":"address"},{"internalType":"address","name":"_ethFeed","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"day","type":"uint256"},{"indexed":false,"internalType":"string","name":"symbol","type":"string"},{"indexed":false,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"bool","name":"above","type":"bool"}],"name":"BetPlaced","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"day","type":"uint256"},{"indexed":false,"internalType":"string","name":"symbol","type":"string"},{"indexed":false,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"payout","type":"uint256"}],"name":"Claimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Deposit","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"day","type":"uint256"},{"indexed":false,"internalType":"string","name":"symbol","type":"string"},{"indexed":false,"internalType":"int256","name":"price","type":"int256"}],"name":"SlotCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"day","type":"uint256"},{"indexed":false,"internalType":"string","name":"symbol","type":"string"},{"indexed":false,"internalType":"int256","name":"targetPrice","type":"int256"}],"name":"SlotSettled","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Withdraw","type":"event"},{"inputs":[],"name":"MIN_DEPOSIT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"balances","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"string","name":"","type":"string"},{"internalType":"address","name":"","type":"address"}],"name":"bets","outputs":[{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"bool","name":"betAbove","type":"bool"},{"internalType":"bool","name":"claimed","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"bettingWindow","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"btcFeed","outputs":[{"internalType":"contract IPriceFeed","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes","name":"","type":"bytes"}],"name":"checkUpkeep","outputs":[{"internalType":"bool","name":"upkeepNeeded","type":"bool"},{"internalType":"bytes","name":"","type":"bytes"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"dayTimestamp","type":"uint256"},{"internalType":"string","name":"symbol","type":"string"}],"name":"claim","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"deposit","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"ethFeed","outputs":[{"internalType":"contract IPriceFeed","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"dayTimestamp","type":"uint256"},{"internalType":"string","name":"symbol","type":"string"}],"name":"getSlotPool","outputs":[{"internalType":"uint256","name":"poolAbove","type":"uint256"},{"internalType":"uint256","name":"poolBelow","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"lastSlotTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes","name":"","type":"bytes"}],"name":"performUpkeep","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"dayTimestamp","type":"uint256"},{"internalType":"string","name":"symbol","type":"string"},{"internalType":"bool","name":"betAbove","type":"bool"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"placeBet","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"settlementTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"string","name":"","type":"string"}],"name":"slots","outputs":[{"internalType":"uint256","name":"startTime","type":"uint256"},{"internalType":"uint256","name":"endTime","type":"uint256"},{"internalType":"uint256","name":"targetTime","type":"uint256"},{"internalType":"uint256","name":"poolAbove","type":"uint256"},{"internalType":"uint256","name":"poolBelow","type":"uint256"},{"internalType":"int256","name":"startPrice","type":"int256"},{"internalType":"int256","name":"targetPrice","type":"int256"},{"internalType":"bool","name":"settled","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"}];
 
     const TOKENS = ['BTC', 'ETH'];
-
-    /* ========== WAGMI CONFIG ========== */
     const config = createConfig({
       chains: [baseSepolia],
       transports: { [baseSepolia.id]: http() }
     });
 
     let userAddress = null;
-
-    /* ========== UI REFS ========== */
     const walletAddressEl = document.getElementById('walletAddress');
     const walletBalanceEl = document.getElementById('walletBalance');
     const contractBalanceEl = document.getElementById('contractBalance');
@@ -517,18 +488,14 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
     const slotsContainer = document.getElementById('slotsContainer');
     const betModal = document.getElementById('betModal');
 
-    /* ========== AUTO CONNECT WALLET ========== */
     async function autoConnectWallet() {
       try {
         walletAddressEl.textContent = 'Connecting...';
-        
         await connect(config, {
           connector: farcasterMiniApp(),
           chainId: baseSepolia.id
         });
-
         userAddress = getAccount(config)?.address;
-
         if (userAddress) {
           walletAddressEl.textContent = `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`;
           showToast(`✅ Connected: ${userAddress.slice(0, 6)}…${userAddress.slice(-4)}`);
@@ -543,10 +510,8 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
       }
     }
 
-    // Auto-connect on load
     autoConnectWallet();
 
-    // Tabs
     const walletTab = document.getElementById('walletTab');
     const betTab = document.getElementById('betTab');
     
@@ -568,25 +533,21 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
       }
     }
 
-    /* ========== TOAST ========== */
     function showToast(html, ms = 3500) {
       toastEl.innerHTML = html;
       toastEl.classList.add('show');
       setTimeout(() => toastEl.classList.remove('show'), ms);
     }
 
-    /* ========== WALLET FUNCTIONS ========== */
     async function updateBalances() {
       if (!userAddress) {
         walletBalanceEl.textContent = '-- ETH';
         contractBalanceEl.textContent = '-- ETH';
         return;
       }
-
       try {
         const balance = await getBalance(config, { address: userAddress });
         walletBalanceEl.textContent = `${parseFloat(balance.formatted).toFixed(4)} ETH`;
-
         const contractBal = await readContract(config, {
           address: CONTRACT_ADDRESS,
           abi: CONTRACT_ABI,
@@ -596,12 +557,9 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
         contractBalanceEl.textContent = `${(Number(contractBal) / 1e18).toFixed(4)} ETH`;
       } catch (e) {
         console.error('Balance update error:', e);
-        walletBalanceEl.textContent = '-- ETH';
-        contractBalanceEl.textContent = '-- ETH';
       }
     }
 
-    // Deposit
     const depositInput = document.getElementById('depositInput');
     const depositBtn = document.getElementById('depositBtn');
     const confirmDepositBtn = document.getElementById('confirmDepositBtn');
@@ -617,7 +575,6 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
         showToast('❌ Minimum deposit is 0.0005 ETH');
         return;
       }
-
       try {
         const txHash = await writeContract(config, {
           address: CONTRACT_ADDRESS,
@@ -633,7 +590,6 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
       }
     };
 
-    // Withdraw
     const withdrawInput = document.getElementById('withdrawInput');
     const withdrawBtn = document.getElementById('withdrawBtn');
     const confirmWithdrawBtn = document.getElementById('confirmWithdrawBtn');
@@ -649,7 +605,6 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
         showToast('❌ Enter valid amount');
         return;
       }
-
       try {
         const txHash = await writeContract(config, {
           address: CONTRACT_ADDRESS,
@@ -665,8 +620,6 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
       }
     };
 
-    /* ========== BETTING FUNCTIONS ========== */
-    let currentSlotData = null;
     let refreshInterval = null;
 
     async function loadSlots() {
@@ -678,7 +631,18 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
         });
 
         const dayTimestamp = Number(lastSlotTime);
-        
+        const btcSlot = await readContract(config, {
+          address: CONTRACT_ADDRESS,
+          abi: CONTRACT_ABI,
+          functionName: 'slots',
+          args: [BigInt(dayTimestamp), 'BTC']
+        });
+
+        if (Number(btcSlot[0]) === 0) {
+          slotsContainer.innerHTML = '<p style="text-align: center; color: #888; padding: 20px;">⏳ Waiting for first slot to be created...<br><small style="color: #666;">Slots are created automatically every 3 minutes</small></p>';
+          return;
+        }
+
         const htmlPromises = TOKENS.map(token => renderSlotCard(dayTimestamp, token));
         const html = await Promise.all(htmlPromises);
         slotsContainer.innerHTML = html.join('');
@@ -687,7 +651,7 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
         refreshInterval = setInterval(() => updateTimers(dayTimestamp), 1000);
       } catch (e) {
         console.error('Load slots error:', e);
-        slotsContainer.innerHTML = '<p style="text-align: center; color: #f88;">Failed to load slots</p>';
+        slotsContainer.innerHTML = '<p style="text-align: center; color: #f88;">Failed to load slots. Please refresh.</p>';
       }
     }
 
@@ -701,10 +665,23 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
         });
 
         const [startTime, endTime, targetTime, poolAbove, poolBelow, startPrice, targetPrice, settled] = slot;
-        const now = Math.floor(Date.now() / 1000);
+        
+        if (Number(startTime) === 0) {
+          return `
+            <div class="slot-card">
+              <div class="slot-header">
+                <div class="token-name">${symbol}</div>
+                <div class="status-badge status-closed">WAITING</div>
+              </div>
+              <p style="text-align: center; color: #888; padding: 20px;">Slot not created yet</p>
+            </div>
+          `;
+        }
 
+        const now = Math.floor(Date.now() / 1000);
         let status = 'settled';
         let statusClass = 'status-settled';
+        
         if (!settled) {
           if (now < Number(endTime)) {
             status = 'open';
@@ -717,6 +694,7 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
 
         let userBet = null;
         let canClaim = false;
+        
         if (userAddress) {
           try {
             const bet = await readContract(config, {
@@ -748,10 +726,14 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
                 <div class="info-value">$${(Number(startPrice) / 1e8).toFixed(2)}</div>
               </div>
               <div class="info-item">
-                <div class="info-label">Target Price</div>
-                <div class="info-value">${settled ? '$' + (Number(targetPrice) / 1e8).toFixed(2) : '---'}</div>
+                <div class="info-label">Final Price ${settled ? '✅' : '⏳'}</div>
+                <div class="info-value">${settled ? '$' + (Number(targetPrice) / 1e8).toFixed(2) : 'TBD'}</div>
               </div>
             </div>
+
+            ${!settled ? `<div class="bet-hint">
+              💡 Bet if final price will be above or below ${(Number(startPrice) / 1e8).toFixed(2)}
+            </div>` : ''}
 
             <div class="pools">
               <div class="pool">
@@ -777,12 +759,23 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
               ${canClaim ? 
                 `<button class="btn" onclick="window.claimReward(${dayTimestamp}, '${symbol}')">🎉 Claim Reward</button>` : 
                 ''}
+              ${settled && userBet && !canClaim && !userBet.claimed ? 
+                `<div style="text-align: center; color: #ff6b6b; font-size: 12px; padding: 8px;">❌ Lost this round</div>` : 
+                ''}
             </div>
           </div>
         `;
       } catch (e) {
         console.error(`Error loading ${symbol}:`, e);
-        return `<div class="slot-card"><p>Error loading ${symbol}</p></div>`;
+        return `
+          <div class="slot-card">
+            <div class="slot-header">
+              <div class="token-name">${symbol}</div>
+              <div class="status-badge status-closed">ERROR</div>
+            </div>
+            <p style="text-align: center; color: #f88; padding: 20px;">Error loading ${symbol}</p>
+          </div>
+        `;
       }
     }
 
@@ -800,6 +793,12 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
           });
 
           const [startTime, endTime, targetTime, , , , , settled] = slot;
+          
+          if (Number(startTime) === 0) {
+            timerEl.textContent = '⏳ Slot not created';
+            continue;
+          }
+
           const now = Math.floor(Date.now() / 1000);
 
           if (settled) {
@@ -811,22 +810,22 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
             const remaining = Number(endTime) - now;
             const mins = Math.floor(remaining / 60);
             const secs = remaining % 60;
-            timerEl.textContent = `Betting closes in ${mins}:${secs.toString().padStart(2, '0')}`;
+            timerEl.textContent = `⏱️ Betting closes in ${mins}:${secs.toString().padStart(2, '0')}`;
           } else if (now < Number(targetTime)) {
             const remaining = Number(targetTime) - now;
             const mins = Math.floor(remaining / 60);
             const secs = remaining % 60;
-            timerEl.textContent = `Settlement in ${mins}:${secs.toString().padStart(2, '0')}`;
+            timerEl.textContent = `🕐 Settlement in ${mins}:${secs.toString().padStart(2, '0')}`;
           } else {
             timerEl.textContent = '⏳ Awaiting settlement...';
           }
         } catch (e) {
+          console.error(`Timer error for ${token}:`, e);
           timerEl.textContent = '--:--';
         }
       }
     }
 
-    /* ========== BET MODAL ========== */
     let selectedBetAbove = true;
     let modalSymbol = '';
     let modalDayTimestamp = 0;
@@ -900,7 +899,6 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
       }
     };
 
-    /* ========== CLAIM ========== */
     window.claimReward = async (dayTimestamp, symbol) => {
       try {
         const txHash = await writeContract(config, {
@@ -922,8 +920,6 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
       }
     };
 
-    /* ========== EVENT LISTENERS ========== */
-    // Watch for Deposit events
     watchContractEvent(config, {
       address: CONTRACT_ADDRESS,
       abi: CONTRACT_ABI,
@@ -938,7 +934,6 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
       }
     });
 
-    // Watch for Withdraw events
     watchContractEvent(config, {
       address: CONTRACT_ADDRESS,
       abi: CONTRACT_ABI,
@@ -953,7 +948,6 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
       }
     });
 
-    // Watch for BetPlaced events
     watchContractEvent(config, {
       address: CONTRACT_ADDRESS,
       abi: CONTRACT_ABI,
@@ -971,7 +965,6 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
       }
     });
 
-    // Watch for Claimed events
     watchContractEvent(config, {
       address: CONTRACT_ADDRESS,
       abi: CONTRACT_ABI,
@@ -988,7 +981,6 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
       }
     });
 
-    // Watch for SlotCreated events
     watchContractEvent(config, {
       address: CONTRACT_ADDRESS,
       abi: CONTRACT_ABI,
@@ -1002,7 +994,6 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
       }
     });
 
-    // Watch for SlotSettled events
     watchContractEvent(config, {
       address: CONTRACT_ADDRESS,
       abi: CONTRACT_ABI,
@@ -1017,7 +1008,6 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
       }
     });
 
-    /* ========== AUTO REFRESH ========== */
     setInterval(() => {
       if (!betTab.classList.contains('hidden')) {
         loadSlots();
@@ -1025,20 +1015,17 @@ sdk.actions.ready({ disableNativeGestures: true }).then(async () => {
       updateBalances();
     }, 10000);
 
-    // Close modal when clicking outside
     betModal.onclick = (e) => {
       if (e.target === betModal) {
         betModal.classList.remove('show');
       }
     };
 
-    // Initial load
     console.log('Crypto Betting DApp Initialized');
-    console.log('Contract Address:', CONTRACT_ADDRESS);
-    console.log('User Address:', userAddress);
-    console.log('Supported Tokens: BTC, ETH');
-    console.log('Betting Window: 2 minutes');
-    console.log('Total Slot Time: 3 minutes');
+    console.log('Contract:', CONTRACT_ADDRESS);
+    console.log('User:', userAddress);
+    console.log('Tokens: BTC, ETH');
+    console.log('Betting: 2 min | Total: 3 min');
   </script>
 </body>
 </html>
