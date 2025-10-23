@@ -529,12 +529,30 @@
   <section id="claimTab" class="section hidden">
     <div class="claim-stats">
       <div class="claim-stat">
-        <div class="claim-stat-label">Available</div>
+        <div class="claim-stat-label">Total Bets</div>
+        <div class="claim-stat-value neutral" id="totalBets">0</div>
+      </div>
+      <div class="claim-stat">
+        <div class="claim-stat-label">Won</div>
+        <div class="claim-stat-value" id="wonBets">0</div>
+      </div>
+      <div class="claim-stat">
+        <div class="claim-stat-label">Lost</div>
+        <div class="claim-stat-value lost" id="lostBets">0</div>
+      </div>
+      <div class="claim-stat">
+        <div class="claim-stat-label">To Claim</div>
         <div class="claim-stat-value" id="claimableCount">0</div>
       </div>
+    </div>
+    <div class="claim-stats" style="margin-bottom: 8px;">
       <div class="claim-stat">
         <div class="claim-stat-label">Total Winnings</div>
         <div class="claim-stat-value" id="totalWinnings">0 ETH</div>
+      </div>
+      <div class="claim-stat">
+        <div class="claim-stat-label">Already Claimed</div>
+        <div class="claim-stat-value neutral" id="totalClaimed">0 ETH</div>
       </div>
     </div>
     <div id="claimContainer" class="slots-container">
@@ -902,10 +920,21 @@
                 `<button class="btn" onclick="window.openBetModal('${symbol}', ${dayTimestamp})">Place Bet</button>` : 
                 ''}
               ${canClaim ? 
-                `<button class="btn" onclick="window.claimReward(${dayTimestamp}, '${symbol}')">🎉 Claim Reward</button>` : 
+                `<div style="text-align: center; margin: 8px 0; padding: 12px; background: linear-gradient(135deg, #2d5016 0%, #1a3010 100%); border-radius: 10px; border: 2px solid #7ee027;">
+                  <div style="font-size: 18px; font-weight: 800; color: #7ee027; margin-bottom: 8px;">🎉 YOU WON! 🎉</div>
+                  <button class="btn btn-claim" onclick="window.claimReward(${dayTimestamp}, '${symbol}')">Claim Your Reward</button>
+                </div>` : 
                 ''}
               ${settled && userBet && !canClaim && !userBet.claimed ? 
-                `<div style="text-align: center; color: #ff6b6b; font-size: 12px; padding: 8px;">❌ Lost this round</div>` : 
+                `<div style="text-align: center; margin: 8px 0; padding: 12px; background: linear-gradient(135deg, #4a1e1e 0%, #2a1010 100%); border-radius: 10px; border: 2px solid #ff6b6b;">
+                  <div style="font-size: 18px; font-weight: 800; color: #ff6b6b; margin-bottom: 4px;">💔 YOU LOST</div>
+                  <div style="font-size: 12px; color: #aaa;">Better luck next time!</div>
+                </div>` : 
+                ''}
+              ${settled && userBet && userBet.claimed ? 
+                `<div style="text-align: center; color: #ffd166; font-size: 12px; padding: 8px; background: #0f0f0f; border-radius: 6px;">
+                  ✅ Reward already claimed
+                </div>` : 
                 ''}
             </div>
           </div>
@@ -974,6 +1003,12 @@
     async function loadClaims() {
       if (!userAddress) {
         claimContainer.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔌</div><p>Please connect wallet first</p></div>';
+        document.getElementById('totalBets').textContent = '0';
+        document.getElementById('wonBets').textContent = '0';
+        document.getElementById('lostBets').textContent = '0';
+        document.getElementById('claimableCount').textContent = '0';
+        document.getElementById('totalWinnings').textContent = '0 ETH';
+        document.getElementById('totalClaimed').textContent = '0 ETH';
         return;
       }
 
@@ -989,7 +1024,10 @@
         const currentTimestamp = Number(lastSlotTime);
         const claims = [];
         let totalWinnings = 0;
+        let totalClaimed = 0;
         let claimableCount = 0;
+        let wonCount = 0;
+        let lostCount = 0;
 
         for (let i = 0; i < 10; i++) {
           const timestamp = currentTimestamp - (i * 180);
@@ -1019,14 +1057,21 @@
                 if (settled) {
                   const didWin = betAbove ? (targetPrice > startPrice) : (targetPrice < startPrice);
                   
-                  if (didWin && !claimed) {
+                  if (didWin) {
+                    wonCount++;
                     const userPool = betAbove ? poolAbove : poolBelow;
                     const oppositePool = betAbove ? poolBelow : poolAbove;
                     const totalPool = Number(userPool) + Number(oppositePool);
                     const payout = totalPool > 0 ? (Number(betAmount) * totalPool) / Number(userPool) : Number(betAmount);
                     
-                    totalWinnings += payout / 1e18;
-                    claimableCount++;
+                    if (!claimed) {
+                      totalWinnings += payout / 1e18;
+                      claimableCount++;
+                    } else {
+                      totalClaimed += payout / 1e18;
+                    }
+                  } else {
+                    lostCount++;
                   }
 
                   claims.push({
@@ -1045,8 +1090,12 @@
           }
         }
 
+        document.getElementById('totalBets').textContent = claims.length;
+        document.getElementById('wonBets').textContent = wonCount;
+        document.getElementById('lostBets').textContent = lostCount;
         document.getElementById('claimableCount').textContent = claimableCount;
         document.getElementById('totalWinnings').textContent = `${totalWinnings.toFixed(4)} ETH`;
+        document.getElementById('totalClaimed').textContent = `${totalClaimed.toFixed(4)} ETH`;
 
         if (claims.length === 0) {
           claimContainer.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No bets found</p><small style="color: #666;">Place some bets first!</small></div>';
