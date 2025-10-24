@@ -795,15 +795,29 @@
         });
 
         const slotStartTime = Number(lastSlotTime);
+        console.log('📊 lastSlotTime:', slotStartTime);
+        console.log('📊 Current time:', Math.floor(Date.now() / 1000));
+        
+        // If lastSlotTime is 0, contract just deployed
+        if (slotStartTime === 0) {
+          slotsContainer.innerHTML = '<p style="text-align: center; color: #888; padding: 20px;">⏳ Waiting for first slot...<br><small style="color: #666;">Contract is initializing. First slot will be created automatically.</small></p>';
+          setTimeout(loadSlots, 5000);
+          return;
+        }
+
         const now = Math.floor(Date.now() / 1000);
         const timeSinceLastSlot = now - slotStartTime;
         
+        console.log('⏱️ Time since last slot:', timeSinceLastSlot, 'seconds');
+        
+        // Check if we need a new slot
         if (timeSinceLastSlot >= SLOT_INTERVAL) {
-          slotsContainer.innerHTML = '<p style="text-align: center; color: #ffd166; padding: 20px;">⏳ Waiting for new slot...<br><small style="color: #666;">Keeper will create new slot soon</small></p>';
+          slotsContainer.innerHTML = `<p style="text-align: center; color: #ffd166; padding: 20px;">⏳ Waiting for new slot...<br><small style="color: #666;">Last slot was ${Math.floor(timeSinceLastSlot / 60)} minutes ago. Keeper should create new slot soon.</small></p>`;
           setTimeout(loadSlots, 5000);
           return;
         }
         
+        // Try to load the current slot
         const btcSlot = await readContract(config, {
           address: CONTRACT_ADDRESS,
           abi: CONTRACT_ABI,
@@ -811,8 +825,10 @@
           args: [BigInt(slotStartTime), 'BTC']
         });
 
+        console.log('🎰 BTC Slot:', btcSlot);
+
         if (Number(btcSlot[0]) === 0) {
-          slotsContainer.innerHTML = '<p style="text-align: center; color: #888; padding: 20px;">⏳ Waiting for slot to be created...<br><small style="color: #666;">Slots are created automatically every 3 minutes</small></p>';
+          slotsContainer.innerHTML = '<p style="text-align: center; color: #888; padding: 20px;">⏳ Slot data not found...<br><small style="color: #666;">The keeper may need to call performUpkeep</small></p>';
           setTimeout(loadSlots, 3000);
           return;
         }
@@ -828,8 +844,8 @@
           }
         }, 1000);
       } catch (e) {
-        console.error('Load slots error:', e);
-        slotsContainer.innerHTML = '<p style="text-align: center; color: #f88;">Failed to load slots. Please refresh.</p>';
+        console.error('❌ Load slots error:', e);
+        slotsContainer.innerHTML = `<p style="text-align: center; color: #f88;">Failed to load slots<br><small style="color: #666;">${e.message || 'Please check console for details'}</small></p>`;
       }
     }
 
