@@ -1067,7 +1067,21 @@
       }
     }
 
-    async function loadClaims() {
+    let isLoadingClaims = false;
+    let lastClaimsLoad = 0;
+
+    async function loadClaims(forceReload = false) {
+      // Prevent loading if already loading
+      if (isLoadingClaims && !forceReload) {
+        return;
+      }
+
+      // Don't reload if loaded within last 10 seconds (unless forced)
+      const now = Date.now();
+      if (!forceReload && now - lastClaimsLoad < 10000) {
+        return;
+      }
+
       if (!userAddress) {
         claimContainer.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔌</div><p>Please connect wallet first</p></div>';
         document.getElementById('totalBets').textContent = '0';
@@ -1080,7 +1094,10 @@
       }
 
       try {
-        claimContainer.innerHTML = '<p style="text-align: center; color: #888;">Loading claims...</p>';
+        isLoadingClaims = true;
+        if (forceReload) {
+          claimContainer.innerHTML = '<p style="text-align: center; color: #888;">Loading claims...</p>';
+        }
         
         const lastSlotTime = await readContract(config, {
           address: CONTRACT_ADDRESS,
@@ -1142,15 +1159,20 @@
 
         if (claims.length === 0) {
           claimContainer.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No bets found</p><small style="color: #666;">Place some bets first!</small></div>';
+          lastClaimsLoad = now;
+          isLoadingClaims = false;
           return;
         }
 
         const claimCards = claims.map(claim => renderClaimCard(claim));
         claimContainer.innerHTML = claimCards.join('');
 
+        lastClaimsLoad = now;
       } catch (e) {
         console.error('Load claims error:', e);
         claimContainer.innerHTML = '<p style="text-align: center; color: #f88;">Failed to load claims. Please try again.</p>';
+      } finally {
+        isLoadingClaims = false;
       }
     }
 
@@ -1374,7 +1396,7 @@
         
         setTimeout(() => {
           loadSlots();
-          loadClaims();
+          loadClaims(true); // Force reload after claim
           updateBalances();
         }, 3000);
       } catch (e) {
@@ -1419,7 +1441,7 @@
               const payout = log.args?.payout?.toString?.() ?? '';
               showToast(`🎉 Claimed ${symbol}: ${(Number(payout) / 1e18).toFixed(4)} ETH`);
               if (currentActiveTab === 'bet') loadSlots();
-              if (currentActiveTab === 'claim') loadClaims();
+              if (currentActiveTab === 'claim') loadClaims(true);
               updateBalances();
             }
           });
@@ -1453,7 +1475,7 @@
             if (symbol === 'BTC') {
               showToast(`✅ Slots settled! Check claims.`);
               if (currentActiveTab === 'bet') loadSlots();
-              if (currentActiveTab === 'claim') loadClaims();
+              if (currentActiveTab === 'claim') loadClaims(true);
             }
           });
         }
@@ -1462,12 +1484,12 @@
 
     setTimeout(setupEventWatchers, 2000);
 
-    // Fast refresh - every 5 seconds to catch settlements quickly
+    // Smart refresh - faster on bet tab, slower on claim tab
     setInterval(() => {
       if (currentActiveTab === 'bet') {
-        loadSlots();
+        loadSlots(); // Fast refresh for live betting
       } else if (currentActiveTab === 'claim') {
-        loadClaims();
+        loadClaims(); // Respects 10s debounce to prevent constant reloading
       }
       updateBalances();
     }, 5000);
