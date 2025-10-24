@@ -469,6 +469,20 @@
       font-weight: 800;
       color: #7ee027;
     }
+
+    .slots-history {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid #333;
+    }
+
+    .history-header {
+      font-size: 14px;
+      font-weight: 700;
+      color: #888;
+      margin-bottom: 12px;
+      padding: 0 12px;
+    }
   </style>
 </head>
 <body>
@@ -522,6 +536,10 @@
   <section id="betTab" class="section hidden">
     <div id="slotsContainer" class="slots-container">
       <p style="text-align: center; color: #888;">Loading slots...</p>
+    </div>
+    <div class="slots-history hidden">
+      <div class="history-header">📜 Recent Slots</div>
+      <div id="recentSlotsContainer" class="slots-container"></div>
     </div>
   </section>
 
@@ -629,12 +647,14 @@
     let userAddress = null;
     let currentActiveTab = 'wallet';
     let timerInterval = null;
+    let cachedSlots = new Map(); // Cache slot data
     
     const walletAddressEl = document.getElementById('walletAddress');
     const walletBalanceEl = document.getElementById('walletBalance');
     const contractBalanceEl = document.getElementById('contractBalance');
     const toastEl = document.getElementById('toast');
     const slotsContainer = document.getElementById('slotsContainer');
+    const recentSlotsContainer = document.getElementById('recentSlotsContainer');
     const claimContainer = document.getElementById('claimContainer');
     const betModal = document.getElementById('betModal');
 
@@ -794,63 +814,55 @@
           functionName: 'lastSlotTime'
         });
 
-        const slotStartTime = Number(lastSlotTime);
-        console.log('📊 lastSlotTime:', slotStartTime);
-        console.log('📊 Current time:', Math.floor(Date.now() / 1000));
+        const currentSlotTime = Number(lastSlotTime);
         
-        // If lastSlotTime is 0, contract just deployed
-        if (slotStartTime === 0) {
-          slotsContainer.innerHTML = '<p style="text-align: center; color: #888; padding: 20px;">⏳ Waiting for first slot...<br><small style="color: #666;">Contract is initializing. First slot will be created automatically.</small></p>';
+        if (currentSlotTime === 0) {
+          slotsContainer.innerHTML = '<p style="text-align: center; color: #888; padding: 20px;">⏳ Waiting for first slot...<br><small style="color: #666;">Contract is initializing</small></p>';
           setTimeout(loadSlots, 5000);
           return;
         }
 
-        const now = Math.floor(Date.now() / 1000);
-        const timeSinceLastSlot = now - slotStartTime;
-        
-        console.log('⏱️ Time since last slot:', timeSinceLastSlot, 'seconds');
-        
-        // Check if we need a new slot
-        if (timeSinceLastSlot >= SLOT_INTERVAL) {
-          slotsContainer.innerHTML = `<p style="text-align: center; color: #ffd166; padding: 20px;">⏳ Waiting for new slot...<br><small style="color: #666;">Last slot was ${Math.floor(timeSinceLastSlot / 60)} minutes ago. Keeper should create new slot soon.</small></p>`;
-          setTimeout(loadSlots, 5000);
-          return;
-        }
-        
-        // Try to load the current slot
-        const btcSlot = await readContract(config, {
-          address: CONTRACT_ADDRESS,
-          abi: CONTRACT_ABI,
-          functionName: 'slots',
-          args: [BigInt(slotStartTime), 'BTC']
-        });
+        // Always show current slot, even if closed
+        const currentHtml = await Promise.all(TOKENS.map(token => renderSlotCard(currentSlotTime, token, true)));
+        slotsContainer.innerHTML = currentHtml.join('');
 
-        console.log('🎰 BTC Slot:', btcSlot);
-
-        if (Number(btcSlot[0]) === 0) {
-          slotsContainer.innerHTML = '<p style="text-align: center; color: #888; padding: 20px;">⏳ Slot data not found...<br><small style="color: #666;">The keeper may need to call performUpkeep</small></p>';
-          setTimeout(loadSlots, 3000);
-          return;
+        // Show recent slots (last 5)
+        const recentSlots = [];
+        for (let i = 1; i <= 5; i++) {
+          const slotTime = currentSlotTime - (i * SLOT_INTERVAL);
+          if (slotTime > 0) {
+            recentSlots.push(slotTime);
+          }
         }
 
-        const htmlPromises = TOKENS.map(token => renderSlotCard(slotStartTime, token));
-        const html = await Promise.all(htmlPromises);
-        slotsContainer.innerHTML = html.join('');
+        if (recentSlots.length > 0) {
+          document.querySelector('.slots-history').classList.remove('hidden');
+          const recentHtml = [];
+          for (const slotTime of recentSlots) {
+            const slotHtml = await Promise.all(TOKENS.map(token => renderSlotCard(slotTime, token, false)));
+            recentHtml.push(...slotHtml);
+          }
+          recentSlotsContainer.innerHTML = recentHtml.join('');
+        }
 
+        // Start timer updates
         if (timerInterval) clearInterval(timerInterval);
         timerInterval = setInterval(() => {
           if (currentActiveTab === 'bet') {
-            updateTimers(slotStartTime);
+            updateAllTimers([currentSlotTime, ...recentSlots]);
           }
         }, 1000);
+
       } catch (e) {
         console.error('❌ Load slots error:', e);
-        slotsContainer.innerHTML = `<p style="text-align: center; color: #f88;">Failed to load slots<br><small style="color: #666;">${e.message || 'Please check console for details'}</small></p>`;
+        slotsContainer.innerHTML = `<p style="text-align: center; color: #f88;">Failed to load slots<br><small style="color: #666;">${e.message || 'Please check console'}</small></p>`;
       }
     }
 
-    async function renderSlotCard(slotStartTime, symbol) {
+    async function renderSlotCard(slotStartTime, symbol, isCurrent = true) {
       try {
+        const cacheKey = `${slotStartTime}-${symbol}`;
+        
         const slot = await readContract(config, {
           address: CONTRACT_ADDRESS,
           abi: CONTRACT_ABI,
@@ -861,16 +873,10 @@
         const [startTime, endTime, targetTime, poolAbove, poolBelow, startPrice, targetPrice, settled] = slot;
         
         if (Number(startTime) === 0) {
-          return `
-            <div class="slot-card">
-              <div class="slot-header">
-                <div class="token-name">${symbol}</div>
-                <div class="status-badge status-closed">WAITING</div>
-              </div>
-              <p style="text-align: center; color: #888; padding: 20px;">Slot not created yet</p>
-            </div>
-          `;
+          return '';
         }
+
+        cachedSlots.set(cacheKey, { slot, timestamp: Date.now() });
 
         const now = Math.floor(Date.now() / 1000);
         let status = 'settled';
@@ -880,14 +886,18 @@
           if (now < Number(endTime)) {
             status = 'open';
             statusClass = 'status-open';
+          } else if (now < Number(targetTime)) {
+            status = 'waiting';
+            statusClass = 'status-closed';
           } else {
-            status = 'closed';
+            status = 'ready';
             statusClass = 'status-closed';
           }
         }
 
         let userBet = null;
         let canClaim = false;
+        let didWin = false;
         
         if (userAddress) {
           try {
@@ -899,18 +909,21 @@
             });
             if (Number(bet[0]) > 0) {
               userBet = { amount: bet[0], betAbove: bet[1], claimed: bet[2] };
-              if (settled && !bet[2]) {
-                const didWin = bet[1] ? (targetPrice > startPrice) : (targetPrice < startPrice);
-                canClaim = didWin;
+              if (settled) {
+                didWin = bet[1] ? (targetPrice > startPrice) : (targetPrice < startPrice);
+                canClaim = didWin && !bet[2];
               }
             }
           } catch (e) {}
         }
 
+        const date = new Date(slotStartTime * 1000);
+        const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
         return `
-          <div class="slot-card">
+          <div class="slot-card ${canClaim ? 'claim-card' : ''}">
             <div class="slot-header">
-              <div class="token-name">${symbol}</div>
+              <div class="token-name">${symbol} ${!isCurrent ? `<small style="font-size: 11px; color: #666;">${timeStr}</small>` : ''}</div>
               <div class="status-badge ${statusClass}">${status.toUpperCase()}</div>
             </div>
 
@@ -925,8 +938,16 @@
               </div>
             </div>
 
-            ${!settled ? `<div class="bet-hint">
+            ${!settled && status === 'open' ? `<div class="bet-hint">
               💡 Bet if final price will be above or below ${(Number(startPrice) / 1e8).toFixed(2)}
+            </div>` : ''}
+
+            ${!settled && status === 'waiting' ? `<div class="bet-hint">
+              🕐 Betting closed. Waiting for settlement...
+            </div>` : ''}
+
+            ${!settled && status === 'ready' ? `<div class="bet-hint">
+              ⏳ Ready to settle. Keeper will process soon...
             </div>` : ''}
 
             <div class="pools">
@@ -940,28 +961,37 @@
               </div>
             </div>
 
-            <div class="timer" id="timer-${symbol}">--:--</div>
+            <div class="timer" id="timer-${slotStartTime}-${symbol}">--:--</div>
 
             ${userBet ? `<div class="user-bet-info">
               Your bet: ${(Number(userBet.amount) / 1e18).toFixed(4)} ETH ${userBet.betAbove ? '📈 Above' : '📉 Below'}
             </div>` : ''}
 
             <div class="bet-controls">
-              ${!settled && status === 'open' ? 
+              ${!settled && status === 'open' && !userBet ? 
                 `<button class="btn" onclick="window.openBetModal('${symbol}', ${slotStartTime})">Place Bet</button>` : 
                 ''}
+              
+              ${userBet && !settled && status === 'open' ? 
+                `<div style="text-align: center; color: #ffd166; font-size: 12px; padding: 8px; background: #0f0f0f; border-radius: 6px;">
+                  ✅ Bet placed! Waiting for settlement...
+                </div>` : 
+                ''}
+
               ${canClaim ? 
                 `<div style="text-align: center; margin: 8px 0; padding: 12px; background: linear-gradient(135deg, #2d5016 0%, #1a3010 100%); border-radius: 10px; border: 2px solid #7ee027;">
                   <div style="font-size: 18px; font-weight: 800; color: #7ee027; margin-bottom: 8px;">🎉 YOU WON! 🎉</div>
                   <button class="btn btn-claim" onclick="window.claimReward(${slotStartTime}, '${symbol}')">Claim Your Reward</button>
                 </div>` : 
                 ''}
-              ${settled && userBet && !canClaim && !userBet.claimed ? 
+              
+              ${settled && userBet && !didWin && !userBet.claimed ? 
                 `<div style="text-align: center; margin: 8px 0; padding: 12px; background: linear-gradient(135deg, #4a1e1e 0%, #2a1010 100%); border-radius: 10px; border: 2px solid #ff6b6b;">
                   <div style="font-size: 18px; font-weight: 800; color: #ff6b6b; margin-bottom: 4px;">💔 YOU LOST</div>
                   <div style="font-size: 12px; color: #aaa;">Better luck next time!</div>
                 </div>` : 
                 ''}
+              
               ${settled && userBet && userBet.claimed ? 
                 `<div style="text-align: center; color: #ffd166; font-size: 12px; padding: 8px; background: #0f0f0f; border-radius: 6px;">
                   ✅ Reward already claimed
@@ -971,62 +1001,68 @@
           </div>
         `;
       } catch (e) {
-        console.error(`Error loading ${symbol}:`, e);
-        return `
-          <div class="slot-card">
-            <div class="slot-header">
-              <div class="token-name">${symbol}</div>
-              <div class="status-badge status-closed">ERROR</div>
-            </div>
-            <p style="text-align: center; color: #f88; padding: 20px;">Error loading ${symbol}</p>
-          </div>
-        `;
+        console.error(`Error loading ${symbol} at ${slotStartTime}:`, e);
+        return '';
       }
     }
 
-    async function updateTimers(slotStartTime) {
-      for (const token of TOKENS) {
-        const timerEl = document.getElementById(`timer-${token}`);
-        if (!timerEl) continue;
+    async function updateAllTimers(slotTimes) {
+      for (const slotTime of slotTimes) {
+        for (const token of TOKENS) {
+          const timerEl = document.getElementById(`timer-${slotTime}-${token}`);
+          if (!timerEl) continue;
 
-        try {
-          const slot = await readContract(config, {
-            address: CONTRACT_ADDRESS,
-            abi: CONTRACT_ABI,
-            functionName: 'slots',
-            args: [BigInt(slotStartTime), token]
-          });
+          try {
+            const cacheKey = `${slotTime}-${token}`;
+            let slot;
 
-          const [startTime, endTime, targetTime, , , , , settled] = slot;
-          
-          if (Number(startTime) === 0) {
-            timerEl.textContent = '⏳ Slot not created';
-            continue;
+            if (cachedSlots.has(cacheKey)) {
+              const cached = cachedSlots.get(cacheKey);
+              if (Date.now() - cached.timestamp < 5000) {
+                slot = cached.slot;
+              }
+            }
+
+            if (!slot) {
+              slot = await readContract(config, {
+                address: CONTRACT_ADDRESS,
+                abi: CONTRACT_ABI,
+                functionName: 'slots',
+                args: [BigInt(slotTime), token]
+              });
+              cachedSlots.set(cacheKey, { slot, timestamp: Date.now() });
+            }
+
+            const [startTime, endTime, targetTime, , , , , settled] = slot;
+            
+            if (Number(startTime) === 0) {
+              timerEl.textContent = '⏳ Slot not created';
+              continue;
+            }
+
+            const now = Math.floor(Date.now() / 1000);
+
+            if (settled) {
+              timerEl.textContent = '✅ Settled';
+              continue;
+            }
+
+            if (now < Number(endTime)) {
+              const remaining = Number(endTime) - now;
+              const mins = Math.floor(remaining / 60);
+              const secs = remaining % 60;
+              timerEl.textContent = `⏱️ Betting closes in ${mins}:${secs.toString().padStart(2, '0')}`;
+            } else if (now < Number(targetTime)) {
+              const remaining = Number(targetTime) - now;
+              const mins = Math.floor(remaining / 60);
+              const secs = remaining % 60;
+              timerEl.textContent = `🕐 Settlement in ${mins}:${secs.toString().padStart(2, '0')}`;
+            } else {
+              timerEl.textContent = '⏳ Awaiting settlement...';
+            }
+          } catch (e) {
+            timerEl.textContent = '--:--';
           }
-
-          const now = Math.floor(Date.now() / 1000);
-
-          if (settled) {
-            timerEl.textContent = '✅ Settled';
-            continue;
-          }
-
-          if (now < Number(endTime)) {
-            const remaining = Number(endTime) - now;
-            const mins = Math.floor(remaining / 60);
-            const secs = remaining % 60;
-            timerEl.textContent = `⏱️ Betting closes in ${mins}:${secs.toString().padStart(2, '0')}`;
-          } else if (now < Number(targetTime)) {
-            const remaining = Number(targetTime) - now;
-            const mins = Math.floor(remaining / 60);
-            const secs = remaining % 60;
-            timerEl.textContent = `🕐 Settlement in ${mins}:${secs.toString().padStart(2, '0')}`;
-          } else {
-            timerEl.textContent = '⏳ Awaiting settlement...';
-          }
-        } catch (e) {
-          console.error(`Timer error for ${token}:`, e);
-          timerEl.textContent = '--:--';
         }
       }
     }
@@ -1060,69 +1096,42 @@
         let wonCount = 0;
         let lostCount = 0;
 
-        // Look back 100 slots (5 hours) to find all bets
+        // Look back 100 slots (5 hours) - load in parallel for speed
+        const slotPromises = [];
         for (let i = 0; i < 100; i++) {
           const timestamp = currentTimestamp - (i * SLOT_INTERVAL);
+          if (timestamp <= 0) break;
           
           for (const token of TOKENS) {
-            try {
-              const slot = await readContract(config, {
-                address: CONTRACT_ADDRESS,
-                abi: CONTRACT_ABI,
-                functionName: 'slots',
-                args: [BigInt(timestamp), token]
-              });
+            slotPromises.push(checkSlotForBet(timestamp, token));
+          }
+        }
 
-              if (Number(slot[0]) === 0) continue;
-
-              const bet = await readContract(config, {
-                address: CONTRACT_ADDRESS,
-                abi: CONTRACT_ABI,
-                functionName: 'bets',
-                args: [BigInt(timestamp), token, userAddress]
-              });
-
-              if (Number(bet[0]) > 0) {
-                const [startTime, endTime, targetTime, poolAbove, poolBelow, startPrice, targetPrice, settled] = slot;
-                const [betAmount, betAbove, claimed] = bet;
-
-                if (settled) {
-                  const didWin = betAbove ? (targetPrice > startPrice) : (targetPrice < startPrice);
-                  
-                  if (didWin) {
-                    wonCount++;
-                    const userPool = betAbove ? poolAbove : poolBelow;
-                    const oppositePool = betAbove ? poolBelow : poolAbove;
-                    const totalPool = Number(userPool) + Number(oppositePool);
-                    
-                    const payout = (Number(userPool) === 0) ? Number(betAmount) : 
-                                   (totalPool > 0 ? (Number(betAmount) * totalPool) / Number(userPool) : Number(betAmount));
-                    
-                    if (!claimed) {
-                      totalWinnings += payout / 1e18;
-                      claimableCount++;
-                    } else {
-                      totalClaimed += payout / 1e18;
-                    }
-                  } else {
-                    lostCount++;
-                  }
-
-                  claims.push({
-                    timestamp,
-                    token,
-                    slot,
-                    bet: { amount: betAmount, betAbove, claimed },
-                    didWin,
-                    settled: true
-                  });
+        const results = await Promise.allSettled(slotPromises);
+        
+        for (const result of results) {
+          if (result.status === 'fulfilled' && result.value) {
+            claims.push(result.value);
+            
+            if (result.value.settled) {
+              if (result.value.didWin) {
+                wonCount++;
+                const payout = result.value.payout;
+                if (!result.value.bet.claimed) {
+                  totalWinnings += payout / 1e18;
+                  claimableCount++;
+                } else {
+                  totalClaimed += payout / 1e18;
                 }
+              } else {
+                lostCount++;
               }
-            } catch (e) {
-              // Slot doesn't exist or no bet, continue
             }
           }
         }
+
+        // Sort by timestamp (newest first)
+        claims.sort((a, b) => b.timestamp - a.timestamp);
 
         document.getElementById('totalBets').textContent = claims.length;
         document.getElementById('wonBets').textContent = wonCount;
@@ -1145,8 +1154,61 @@
       }
     }
 
+    async function checkSlotForBet(timestamp, token) {
+      try {
+        const [slot, bet] = await Promise.all([
+          readContract(config, {
+            address: CONTRACT_ADDRESS,
+            abi: CONTRACT_ABI,
+            functionName: 'slots',
+            args: [BigInt(timestamp), token]
+          }),
+          readContract(config, {
+            address: CONTRACT_ADDRESS,
+            abi: CONTRACT_ABI,
+            functionName: 'bets',
+            args: [BigInt(timestamp), token, userAddress]
+          })
+        ]);
+
+        if (Number(slot[0]) === 0 || Number(bet[0]) === 0) {
+          return null;
+        }
+
+        const [startTime, endTime, targetTime, poolAbove, poolBelow, startPrice, targetPrice, settled] = slot;
+        const [betAmount, betAbove, claimed] = bet;
+
+        let didWin = false;
+        let payout = 0;
+
+        if (settled) {
+          didWin = betAbove ? (targetPrice > startPrice) : (targetPrice < startPrice);
+          
+          if (didWin) {
+            const userPool = betAbove ? poolAbove : poolBelow;
+            const oppositePool = betAbove ? poolBelow : poolAbove;
+            const totalPool = Number(userPool) + Number(oppositePool);
+            payout = (Number(userPool) === 0) ? Number(betAmount) : 
+                     (totalPool > 0 ? (Number(betAmount) * totalPool) / Number(userPool) : Number(betAmount));
+          }
+        }
+
+        return {
+          timestamp,
+          token,
+          slot,
+          bet: { amount: betAmount, betAbove, claimed },
+          didWin,
+          settled,
+          payout
+        };
+      } catch (e) {
+        return null;
+      }
+    }
+
     function renderClaimCard(claim) {
-      const { timestamp, token, slot, bet, didWin, settled } = claim;
+      const { timestamp, token, slot, bet, didWin, settled, payout } = claim;
       const [startTime, endTime, targetTime, poolAbove, poolBelow, startPrice, targetPrice, isSettled] = slot;
       
       let statusClass = 'status-settled';
@@ -1158,19 +1220,12 @@
       } else if (didWin) {
         statusClass = 'status-won';
         statusText = 'WON! 🎉';
-      } else {
+      } else if (settled) {
         statusClass = 'status-lost';
         statusText = 'LOST';
-      }
-
-      let payout = 0;
-      if (didWin && !bet.claimed) {
-        const userPool = bet.betAbove ? poolAbove : poolBelow;
-        const oppositePool = bet.betAbove ? poolBelow : poolAbove;
-        const totalPool = Number(userPool) + Number(oppositePool);
-        
-        payout = (Number(userPool) === 0) ? Number(bet.amount) : 
-                 (totalPool > 0 ? (Number(bet.amount) * totalPool) / Number(userPool) : Number(bet.amount));
+      } else {
+        statusClass = 'status-closed';
+        statusText = 'PENDING';
       }
 
       const date = new Date(timestamp * 1000);
@@ -1194,7 +1249,7 @@
             </div>
             <div class="info-item">
               <div class="info-label">Final Price</div>
-              <div class="info-value">${(Number(targetPrice) / 1e8).toFixed(2)}</div>
+              <div class="info-value">${settled ? (Number(targetPrice) / 1e8).toFixed(2) : 'Pending'}</div>
             </div>
           </div>
 
@@ -1202,7 +1257,7 @@
             Your bet: ${(Number(bet.amount) / 1e18).toFixed(4)} ETH ${bet.betAbove ? '📈 Above' : '📉 Below'}
           </div>
 
-          ${didWin && !bet.claimed ? `
+          ${didWin && !bet.claimed && settled ? `
             <div class="payout-info">
               <span class="payout-label">Your Winnings:</span>
               <span class="payout-value">${(payout / 1e18).toFixed(4)} ETH</span>
@@ -1218,9 +1273,15 @@
             </div>
           ` : ''}
 
-          ${!didWin ? `
+          ${!didWin && settled ? `
             <div style="text-align: center; color: #888; font-size: 12px; padding: 8px;">
               Price went ${bet.betAbove ? 'down' : 'up'} • Better luck next time!
+            </div>
+          ` : ''}
+
+          ${!settled ? `
+            <div style="text-align: center; color: #888; font-size: 12px; padding: 8px;">
+              ⏳ Waiting for settlement...
             </div>
           ` : ''}
         </div>
@@ -1390,7 +1451,7 @@
           logs.forEach(log => {
             const symbol = log.args?.symbol ?? '';
             if (symbol === 'BTC') {
-              showToast(`✅ Slots settled!`);
+              showToast(`✅ Slots settled! Check claims.`);
               if (currentActiveTab === 'bet') loadSlots();
               if (currentActiveTab === 'claim') loadClaims();
             }
@@ -1401,7 +1462,7 @@
 
     setTimeout(setupEventWatchers, 2000);
 
-    // Auto refresh every 15 seconds
+    // Fast refresh - every 5 seconds to catch settlements quickly
     setInterval(() => {
       if (currentActiveTab === 'bet') {
         loadSlots();
@@ -1409,7 +1470,7 @@
         loadClaims();
       }
       updateBalances();
-    }, 15000);
+    }, 5000);
 
     betModal.onclick = (e) => {
       if (e.target === betModal) {
@@ -1421,7 +1482,7 @@
     console.log('📍 Contract:', CONTRACT_ADDRESS);
     console.log('👤 User:', userAddress || 'Not connected');
     console.log('💰 Tokens: BTC, ETH');
-    console.log('⏱️ Betting: 2 min | Total: 3 min');
+    console.log('⏱️ Betting: 2 min | Total: 3 min | Refresh: 5s');
   </script>
 </body>
 </html>
