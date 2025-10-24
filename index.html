@@ -611,10 +611,16 @@
       showToast("Failed to initialize. Try reloading.");
     });
 
-    const CONTRACT_ADDRESS = '0x6460E8fD8E347Be77D2F8c395ba65e7A7C276850';
-    const CONTRACT_ABI = [{"inputs":[{"internalType":"address","name":"_btcFeed","type":"address"},{"internalType":"address","name":"_ethFeed","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"day","type":"uint256"},{"indexed":false,"internalType":"string","name":"symbol","type":"string"},{"indexed":false,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"bool","name":"above","type":"bool"}],"name":"BetPlaced","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"day","type":"uint256"},{"indexed":false,"internalType":"string","name":"symbol","type":"string"},{"indexed":false,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"payout","type":"uint256"}],"name":"Claimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Deposit","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"day","type":"uint256"},{"indexed":false,"internalType":"string","name":"symbol","type":"string"},{"indexed":false,"internalType":"int256","name":"price","type":"int256"}],"name":"SlotCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"day","type":"uint256"},{"indexed":false,"internalType":"string","name":"symbol","type":"string"},{"indexed":false,"internalType":"int256","name":"targetPrice","type":"int256"}],"name":"SlotSettled","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Withdraw","type":"event"},{"inputs":[],"name":"MIN_DEPOSIT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"balances","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"string","name":"","type":"string"},{"internalType":"address","name":"","type":"address"}],"name":"bets","outputs":[{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"bool","name":"betAbove","type":"bool"},{"internalType":"bool","name":"claimed","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"bettingWindow","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"btcFeed","outputs":[{"internalType":"contract IPriceFeed","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes","name":"","type":"bytes"}],"name":"checkUpkeep","outputs":[{"internalType":"bool","name":"upkeepNeeded","type":"bool"},{"internalType":"bytes","name":"","type":"bytes"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"dayTimestamp","type":"uint256"},{"internalType":"string","name":"symbol","type":"string"}],"name":"claim","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"deposit","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"ethFeed","outputs":[{"internalType":"contract IPriceFeed","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"dayTimestamp","type":"uint256"},{"internalType":"string","name":"symbol","type":"string"}],"name":"getSlotPool","outputs":[{"internalType":"uint256","name":"poolAbove","type":"uint256"},{"internalType":"uint256","name":"poolBelow","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"lastSlotTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes","name":"","type":"bytes"}],"name":"performUpkeep","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"dayTimestamp","type":"uint256"},{"internalType":"string","name":"symbol","type":"string"},{"internalType":"bool","name":"betAbove","type":"bool"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"placeBet","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"settlementTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"string","name":"","type":"string"}],"name":"slots","outputs":[{"internalType":"uint256","name":"startTime","type":"uint256"},{"internalType":"uint256","name":"endTime","type":"uint256"},{"internalType":"uint256","name":"targetTime","type":"uint256"},{"internalType":"uint256","name":"poolAbove","type":"uint256"},{"internalType":"uint256","name":"poolBelow","type":"uint256"},{"internalType":"int256","name":"startPrice","type":"int256"},{"internalType":"int256","name":"targetPrice","type":"int256"},{"internalType":"bool","name":"settled","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"}];
+    // ⚠️ UPDATE YOUR CONTRACT ADDRESS HERE
+    const CONTRACT_ADDRESS = '0x75447B88BCd68b10E5776d5883aE10BCfe322D4C';
+    
+    // ⚠️ PASTE YOUR CONTRACT ABI HERE
+    const CONTRACT_ABI = [{"inputs":[{"internalType":"address","name":"_btcFeed","type":"address"},{"internalType":"address","name":"_ethFeed","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"startTime","type":"uint256"},{"indexed":false,"internalType":"string","name":"symbol","type":"string"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"bool","name":"above","type":"bool"}],"name":"BetPlaced","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"startTime","type":"uint256"},{"indexed":false,"internalType":"string","name":"symbol","type":"string"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"payout","type":"uint256"}],"name":"Claimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Deposit","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"startTime","type":"uint256"},{"indexed":false,"internalType":"string","name":"symbol","type":"string"},{"indexed":false,"internalType":"int256","name":"startPrice","type":"int256"}],"name":"SlotCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"startTime","type":"uint256"},{"indexed":false,"internalType":"string","name":"symbol","type":"string"},{"indexed":false,"internalType":"int256","name":"targetPrice","type":"int256"}],"name":"SlotSettled","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Withdraw","type":"event"},{"inputs":[],"name":"BETTING_WINDOW","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MIN_DEPOSIT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"SLOT_INTERVAL","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"balances","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"string","name":"","type":"string"},{"internalType":"address","name":"","type":"address"}],"name":"bets","outputs":[{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"bool","name":"betAbove","type":"bool"},{"internalType":"bool","name":"claimed","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"btcFeed","outputs":[{"internalType":"contract IPriceFeed","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes","name":"","type":"bytes"}],"name":"checkUpkeep","outputs":[{"internalType":"bool","name":"upkeepNeeded","type":"bool"},{"internalType":"bytes","name":"","type":"bytes"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"slotStartTime","type":"uint256"},{"internalType":"string","name":"symbol","type":"string"}],"name":"claim","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"deposit","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"ethFeed","outputs":[{"internalType":"contract IPriceFeed","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"lastSlotTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes","name":"","type":"bytes"}],"name":"performUpkeep","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"slotStartTime","type":"uint256"},{"internalType":"string","name":"symbol","type":"string"},{"internalType":"bool","name":"betAbove","type":"bool"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"placeBet","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"string","name":"","type":"string"}],"name":"slots","outputs":[{"internalType":"uint256","name":"startTime","type":"uint256"},{"internalType":"uint256","name":"endTime","type":"uint256"},{"internalType":"uint256","name":"targetTime","type":"uint256"},{"internalType":"uint256","name":"poolAbove","type":"uint256"},{"internalType":"uint256","name":"poolBelow","type":"uint256"},{"internalType":"int256","name":"startPrice","type":"int256"},{"internalType":"int256","name":"targetPrice","type":"int256"},{"internalType":"bool","name":"settled","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"}];
 
     const TOKENS = ['BTC', 'ETH'];
+    const SLOT_INTERVAL = 180; // 3 minutes
+    const BETTING_WINDOW = 120; // 2 minutes
+
     const config = createConfig({
       chains: [baseSepolia],
       transports: { [baseSepolia.id]: http() }
@@ -667,7 +673,6 @@
     function switchTab(tab) {
       currentActiveTab = tab;
       
-      // Clear timer interval when switching tabs
       if (timerInterval) {
         clearInterval(timerInterval);
         timerInterval = null;
@@ -789,11 +794,11 @@
           functionName: 'lastSlotTime'
         });
 
-        const dayTimestamp = Number(lastSlotTime);
+        const slotStartTime = Number(lastSlotTime);
         const now = Math.floor(Date.now() / 1000);
-        const timeSinceLastSlot = now - dayTimestamp;
+        const timeSinceLastSlot = now - slotStartTime;
         
-        if (timeSinceLastSlot >= 180) {
+        if (timeSinceLastSlot >= SLOT_INTERVAL) {
           slotsContainer.innerHTML = '<p style="text-align: center; color: #ffd166; padding: 20px;">⏳ Waiting for new slot...<br><small style="color: #666;">Keeper will create new slot soon</small></p>';
           setTimeout(loadSlots, 5000);
           return;
@@ -803,7 +808,7 @@
           address: CONTRACT_ADDRESS,
           abi: CONTRACT_ABI,
           functionName: 'slots',
-          args: [BigInt(dayTimestamp), 'BTC']
+          args: [BigInt(slotStartTime), 'BTC']
         });
 
         if (Number(btcSlot[0]) === 0) {
@@ -812,14 +817,14 @@
           return;
         }
 
-        const htmlPromises = TOKENS.map(token => renderSlotCard(dayTimestamp, token));
+        const htmlPromises = TOKENS.map(token => renderSlotCard(slotStartTime, token));
         const html = await Promise.all(htmlPromises);
         slotsContainer.innerHTML = html.join('');
 
         if (timerInterval) clearInterval(timerInterval);
         timerInterval = setInterval(() => {
           if (currentActiveTab === 'bet') {
-            updateTimers(dayTimestamp);
+            updateTimers(slotStartTime);
           }
         }, 1000);
       } catch (e) {
@@ -828,13 +833,13 @@
       }
     }
 
-    async function renderSlotCard(dayTimestamp, symbol) {
+    async function renderSlotCard(slotStartTime, symbol) {
       try {
         const slot = await readContract(config, {
           address: CONTRACT_ADDRESS,
           abi: CONTRACT_ABI,
           functionName: 'slots',
-          args: [BigInt(dayTimestamp), symbol]
+          args: [BigInt(slotStartTime), symbol]
         });
 
         const [startTime, endTime, targetTime, poolAbove, poolBelow, startPrice, targetPrice, settled] = slot;
@@ -874,7 +879,7 @@
               address: CONTRACT_ADDRESS,
               abi: CONTRACT_ABI,
               functionName: 'bets',
-              args: [BigInt(dayTimestamp), symbol, userAddress]
+              args: [BigInt(slotStartTime), symbol, userAddress]
             });
             if (Number(bet[0]) > 0) {
               userBet = { amount: bet[0], betAbove: bet[1], claimed: bet[2] };
@@ -927,12 +932,12 @@
 
             <div class="bet-controls">
               ${!settled && status === 'open' ? 
-                `<button class="btn" onclick="window.openBetModal('${symbol}', ${dayTimestamp})">Place Bet</button>` : 
+                `<button class="btn" onclick="window.openBetModal('${symbol}', ${slotStartTime})">Place Bet</button>` : 
                 ''}
               ${canClaim ? 
                 `<div style="text-align: center; margin: 8px 0; padding: 12px; background: linear-gradient(135deg, #2d5016 0%, #1a3010 100%); border-radius: 10px; border: 2px solid #7ee027;">
                   <div style="font-size: 18px; font-weight: 800; color: #7ee027; margin-bottom: 8px;">🎉 YOU WON! 🎉</div>
-                  <button class="btn btn-claim" onclick="window.claimReward(${dayTimestamp}, '${symbol}')">Claim Your Reward</button>
+                  <button class="btn btn-claim" onclick="window.claimReward(${slotStartTime}, '${symbol}')">Claim Your Reward</button>
                 </div>` : 
                 ''}
               ${settled && userBet && !canClaim && !userBet.claimed ? 
@@ -963,7 +968,7 @@
       }
     }
 
-    async function updateTimers(dayTimestamp) {
+    async function updateTimers(slotStartTime) {
       for (const token of TOKENS) {
         const timerEl = document.getElementById(`timer-${token}`);
         if (!timerEl) continue;
@@ -973,7 +978,7 @@
             address: CONTRACT_ADDRESS,
             abi: CONTRACT_ABI,
             functionName: 'slots',
-            args: [BigInt(dayTimestamp), token]
+            args: [BigInt(slotStartTime), token]
           });
 
           const [startTime, endTime, targetTime, , , , , settled] = slot;
@@ -1041,7 +1046,7 @@
 
         // Look back 100 slots (5 hours) to find all bets
         for (let i = 0; i < 100; i++) {
-          const timestamp = currentTimestamp - (i * 180);
+          const timestamp = currentTimestamp - (i * SLOT_INTERVAL);
           
           for (const token of TOKENS) {
             try {
@@ -1074,7 +1079,6 @@
                     const oppositePool = betAbove ? poolBelow : poolAbove;
                     const totalPool = Number(userPool) + Number(oppositePool);
                     
-                    // Handle edge case: if user pool is 0, just return bet amount
                     const payout = (Number(userPool) === 0) ? Number(betAmount) : 
                                    (totalPool > 0 ? (Number(betAmount) * totalPool) / Number(userPool) : Number(betAmount));
                     
@@ -1149,7 +1153,6 @@
         const oppositePool = bet.betAbove ? poolBelow : poolAbove;
         const totalPool = Number(userPool) + Number(oppositePool);
         
-        // Handle edge case: if user pool is 0, just return bet amount
         payout = (Number(userPool) === 0) ? Number(bet.amount) : 
                  (totalPool > 0 ? (Number(bet.amount) * totalPool) / Number(userPool) : Number(bet.amount));
       }
@@ -1210,7 +1213,7 @@
 
     let selectedBetAbove = true;
     let modalSymbol = '';
-    let modalDayTimestamp = 0;
+    let modalSlotStartTime = 0;
 
     const betAboveBtn = document.getElementById('betAboveBtn');
     const betBelowBtn = document.getElementById('betBelowBtn');
@@ -1218,9 +1221,9 @@
     const cancelBetBtn = document.getElementById('cancelBetBtn');
     const modalTitle = document.getElementById('modalTitle');
 
-    window.openBetModal = (symbol, dayTimestamp) => {
+    window.openBetModal = (symbol, slotStartTime) => {
       modalSymbol = symbol;
-      modalDayTimestamp = dayTimestamp;
+      modalSlotStartTime = slotStartTime;
       selectedBetAbove = true;
       
       modalTitle.textContent = `Place Bet - ${symbol}`;
@@ -1262,7 +1265,7 @@
           abi: CONTRACT_ABI,
           functionName: 'placeBet',
           args: [
-            BigInt(modalDayTimestamp),
+            BigInt(modalSlotStartTime),
             modalSymbol,
             selectedBetAbove,
             BigInt(Math.floor(parseFloat(amount) * 1e18))
@@ -1281,13 +1284,13 @@
       }
     };
 
-    window.claimReward = async (dayTimestamp, symbol) => {
+    window.claimReward = async (slotStartTime, symbol) => {
       try {
         const txHash = await writeContract(config, {
           address: CONTRACT_ADDRESS,
           abi: CONTRACT_ABI,
           functionName: 'claim',
-          args: [BigInt(dayTimestamp), symbol]
+          args: [BigInt(slotStartTime), symbol]
         });
         
         showToast(`🎉 Claim successful! <a target="_blank" href="https://sepolia.basescan.org/tx/${txHash}">view</a>`, 5000);
@@ -1303,7 +1306,7 @@
       }
     };
 
-    // Setup event watchers - only once
+    // Setup event watchers
     let eventWatchersSetup = false;
     
     function setupEventWatchers() {
@@ -1370,7 +1373,6 @@
         onLogs: logs => {
           logs.forEach(log => {
             const symbol = log.args?.symbol ?? '';
-            const targetPrice = log.args?.targetPrice?.toString?.() ?? '';
             if (symbol === 'BTC') {
               showToast(`✅ Slots settled!`);
               if (currentActiveTab === 'bet') loadSlots();
@@ -1381,7 +1383,6 @@
       });
     }
 
-    // Setup watchers after connection
     setTimeout(setupEventWatchers, 2000);
 
     // Auto refresh every 15 seconds
